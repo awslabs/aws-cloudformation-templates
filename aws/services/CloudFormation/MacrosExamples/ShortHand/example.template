@@ -1,8 +1,0 @@
-Transform: ShortHand
-
-Resources:
-  - S3::Bucket
-  - S3::Bucket:
-      AccessControl: PublicRead
-      VersioningConfiguration.Status: Enabled
-  - WebBucket S3::Bucket WebsiteConfiguration.IndexDocument=index.html
