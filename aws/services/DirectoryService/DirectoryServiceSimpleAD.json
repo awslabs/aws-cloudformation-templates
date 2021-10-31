@@ -60,8 +60,12 @@
     "SimpleAD": {
       "Type": "AWS::DirectoryService::SimpleAD",
       "Properties": {
-        "CreateAlias": false,
-        "EnableSso": false,
+        "CreateAlias": {
+          "Ref": "CreateAlias"
+        },
+        "EnableSso": {
+          "Ref": "EnableSingleSignOn"
+        },
         "Name": {
           "Ref": "DomainName"
         },
