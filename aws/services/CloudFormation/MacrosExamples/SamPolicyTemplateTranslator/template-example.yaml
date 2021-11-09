@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform:
+  - SamPolicyTemplateTranslator
+Parameters:
+  UserTable:
+    Type: String
+    Default: "MyTable"
+Resources:
+  IAMRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service:
+                - 'lambda.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName:
+              Ref: UserTable
+      Path: "/"

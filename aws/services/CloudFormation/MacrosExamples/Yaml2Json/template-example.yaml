@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 
+  - Yaml2Json
+Resources:
+  Dashboard: 
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: 
+        Fn::Sub: '${AWS::StackName}'
+      DashboardBody:
+        Fn::Yaml2Json:
+          widgets:
+            - type: text
+              x: 0
+              y: 0
+              width: 9
+              height: 9
+              properties:
+                markdown: "# This Dashboard illustrate the `Yaml2Json` Macro\n"

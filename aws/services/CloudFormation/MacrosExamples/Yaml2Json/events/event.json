@@ -1,0 +1,40 @@
+{
+  "accountId": "012345678901",
+  "fragment": {
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Transform": [
+      "Yaml2Json"
+    ],
+    "Resources": {
+      "Dashboard": {
+        "Type": "AWS::CloudWatch::Dashboard",
+        "Properties": {
+          "DashboardBody": {
+            "Fn::Yaml2Json": {
+              "widgets": [
+                {
+                  "type": "text",
+                  "x": 0,
+                  "y": 0,
+                  "width": 9,
+                  "height": 9,
+                  "properties": {
+                    "markdown": "# This Dashboard illustrate the `Yaml2Json` Macro\n"
+                  }
+                }
+              ]
+            }
+          },
+          "DashboardName": {
+            "Fn::Sub": "${AWS::StackName}"
+          }
+        }
+      }
+    }
+  },
+  "transformId": "012345678901::Yaml2Json",
+  "requestId": "676d8364-1e54-4a9b-8086-7ee821e3d3bf",
+  "region": "eu-west-1",
+  "params": {},
+  "templateParameterValues": { }
+}
