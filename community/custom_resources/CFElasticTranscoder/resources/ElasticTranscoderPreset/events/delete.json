@@ -1,0 +1,10 @@
+{
+   "RequestType" : "Delete",
+   "RequestId": "d88b16ea-6106-42cd-8f20-a0fbf927ae44",
+   "ResponseURL": "https://cloudformation-custom-resource-response-euwest1.s3-eu-west-1.amazonaws.com/arn%3Aaws%3Acloudformation%3Aeu-west-1%3A123456789012%3Astack/ElasticTranscoder/a7e614b0-d031-11ea-a9eb-0a121e68abee%7CElasticTranscoderPipeline%7Cd88b16ea-6106-42cd-8f20-a0fbf927ae44?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20200727T175127Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7199&X-Amz-Credential=AKIAJ7MCS7PVEUOADEEA%2F20200727%2Feu-west-1%2Fs3%2Faws4_request&X-Amz-Signature=a6234392157b14d2f0f7caf9ea758545f27cbab18435728e9e6a6185f1be35a4",
+   "ResourceType": "Custom::ElasticTranscoderPipeline",
+   "LogicalResourceId": "ElasticTranscoderPipeline",
+   "StackId": "arn:aws:cloudformation:eu-west-1:123456789101:stack/ElasticTranscoder/37c49100-d033-11ea-887f-0265d6cdeea8",
+   "PhysicalResourceId" : "1234567891012-abcdef",
+   "ResourceProperties" : { }
+}           

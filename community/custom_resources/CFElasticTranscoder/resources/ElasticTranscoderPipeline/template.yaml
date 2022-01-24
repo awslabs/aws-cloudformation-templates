@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: |
+  This stack provides a Cloudformation Custom Resource to create an ElasticTranscoder Pipeline in your CloudFormation template.
+Resources:
+
+  ElasticTranscoderPipeline:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ElasticTranscoderPipeline
+      Description: A CloudFormation Custom Resource to create an ElasticTranscoder pipeline
+      CodeUri: lambdas/ElasticTranscoderPipeline
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Policies:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        - "arn:aws:iam::aws:policy/AmazonElasticTranscoder_FullAccess"
+
+Outputs:
+  ElasticTranscoderPipeline:
+    Description: The ElasticTranscoderPipeline function
+    Value:
+      Ref: ElasticTranscoderPipeline
+
+  ElasticTranscoderPipelineArn:
+    Description: The ElasticTranscoderPipeline function ARN
+    Value:
+      Fn::GetAtt: ElasticTranscoderPipeline.Arn

@@ -1,2 +1,8 @@
 .DS_Store
 .idea/
+**/.aws-sam
+**/.settings
+**/.project
+**/.pydevproject
+**/Pipfile
+**/samconfig.toml

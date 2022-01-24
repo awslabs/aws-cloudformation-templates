@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: |
+  This stack provides a Cloudformation Custom Resource to create an ElasticTranscoder Preset in your CloudFormation template.
+Resources:
+
+  ElasticTranscoderPreset:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ElasticTranscoderPreset
+      Description: A CloudFormation Custom Resource to create an ElasticTranscoder Preset
+      CodeUri: lambdas/ElasticTranscoderPreset
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Policies:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        - "arn:aws:iam::aws:policy/AmazonElasticTranscoder_FullAccess"
+
+Outputs:
+  ElasticTranscoderPreset:
+    Description: The ElasticTranscoderPreset function
+    Value:
+      Ref: ElasticTranscoderPreset
+
+  ElasticTranscoderPresetArn:
+    Description: The ElasticTranscoderPreset function ARN
+    Value:
+      Fn::GetAtt: ElasticTranscoderPreset.Arn

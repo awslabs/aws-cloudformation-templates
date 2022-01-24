@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  This stack provides a Cloudformation Macro that translate a Yaml element 
+  into its JSON equivalent. It is usefull to convert a YAML dashboard into 
+  its JSON equivalent in order to work with cloudformation restrictions
+Resources:
+
+  Yaml2JsonLayer01:
+    Type: AWS::Serverless::LayerVersion
+    Metadata:
+      BuildMethod: python3.8
+    Properties:
+      ContentUri: layers/Yaml2JsonLayer01
+      CompatibleRuntimes:
+        - python3.8
+      RetentionPolicy: Delete
+
+  Yaml2JsonFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/Yaml2Json
+      Description: A CF Macro to translate a YAML element into its JSON equivalent
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Layers:
+        - Ref: Yaml2JsonLayer01
+
+  Yaml2JsonMacro:
+      Type: AWS::CloudFormation::Macro
+      Properties:
+        Name:
+          Fn::Sub: '${AWS::StackName}'
+        Description: Translate a Yaml element into its JSON equivalent
+        FunctionName:
+          Fn::GetAtt: Yaml2JsonFunction.Arn

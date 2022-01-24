@@ -1,0 +1,51 @@
+{
+  "accountId": "012345678901",
+  "fragment": {
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Transform": [
+      "SamPolicyTemplateTranslator"
+    ],
+    "Parameters": {
+      "UserTable": {
+        "Type": "String",
+        "Default": "MyTable"
+      }
+    },
+    "Resources": {
+      "IAMRole": {
+        "Type": "AWS::IAM::Role",
+        "Properties": {
+          "AssumeRolePolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }]
+          },
+          "Policies": [{
+            "DynamoDBCrudPolicy": {
+              "TableName": {
+                "Ref": "UserTable"
+              }
+            }
+          }],
+          "Path": "/"
+        }
+      }
+    }
+  },
+  "transformId": "012345678901::ExpandPolicyName",
+  "requestId": "676d8364-1e54-4a9b-8086-7ee821e3d3bf",
+  "region": "eu-west-1",
+  "params": {},
+  "templateParameterValues": {
+    "UserTable": "MyTable"
+  }
+}
