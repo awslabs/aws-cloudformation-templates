@@ -1,0 +1,22 @@
+{
+   "RequestType": "Create",
+   "ServiceToken": "arn:aws:lambda:eu-west-1:123456789101:function:ElasticTranscoderPipeline",
+   "ResponseURL": "https://cloudformation-custom-resource-response-euwest1.s3-eu-west-1.amazonaws.com/arn%3Aaws%3Acloudformation%3Aeu-west-1%3A123456789012%3Astack/ElasticTranscoder/a7e614b0-d031-11ea-a9eb-0a121e68abee%7CElasticTranscoderPipeline%7Cd88b16ea-6106-42cd-8f20-a0fbf927ae44?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20200727T175127Z&X-Amz-SignedHeaders=host&X-Amz-Expires=7199&X-Amz-Credential=AKIAJ7MCS7PVEUOADEEA%2F20200727%2Feu-west-1%2Fs3%2Faws4_request&X-Amz-Signature=a6234392157b14d2f0f7caf9ea758545f27cbab18435728e9e6a6185f1be35a4",
+   "StackId": "arn:aws:cloudformation:eu-west-1:123456789101:stack/ElasticTranscoder/37c49100-d033-11ea-887f-0265d6cdeea8",
+   "RequestId": "d88b16ea-6106-42cd-8f20-a0fbf927ae44",
+   "LogicalResourceId": "ElasticTranscoderPipeline",
+   "ResourceType": "Custom::ElasticTranscoderPipeline",
+   "ResourceProperties": {
+       "ServiceToken": "arn:aws:lambda:eu-west-1:123456789101:function:ElasticTranscoderPipeline",
+       "Role": "arn:aws:iam::123456789101:role/ElasticTranscoder-PipelineRole-19S2SWJAWC7Z2",
+       "OutputBucket": "elastictranscoder-outputbucket-123456789101",
+       "InputBucket": "elastictranscoder-inputbucket-123456789101",
+       "Notifications": {
+           "Warning": "arn:aws:sns:eu-west-1:123456789101:ElasticTranscoder-PipelineNotification-ABCDEF123456",
+           "Completed": "arn:aws:sns:eu-west-1:123456789101:ElasticTranscoder-PipelineNotification-ABCDEF123456",
+           "Error": "arn:aws:sns:eu-west-1:123456789101:ElasticTranscoder-PipelineNotification-ABCDEF123456",
+           "Progressing": "arn:aws:sns:eu-west-1:123456789101:ElasticTranscoder-PipelineNotification-ABCDEF123456"
+       },
+       "Name": "MyElasticTranscoderPipeline"
+   }
+}

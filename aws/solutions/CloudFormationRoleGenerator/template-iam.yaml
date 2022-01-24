@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 
+  - AWS::Serverless-2016-10-31
+  - PolicyGenerator
+Description: >
+  This stack creates the StackDeveloper IAM User and assign it Administrative priviledges, while developing the stack.
+Parameters:
+  StackDeveloperEmail:
+    Description: "Email address to notify when new logs from the trail are published."
+    Type: String
+Resources:
+
+  StackDeveloper:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: StackDeveloper
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AdministratorAccess"
+
+  AccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: StackDeveloper
+    DependsOn: StackDeveloper
+
+  Bucket: 
+    DeletionPolicy: Delete
+    Type: AWS::S3::Bucket
+    Properties: {}
+
+  BucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: 
+        Ref: Bucket
+      PolicyDocument: 
+        DefaultS3BucketPolicy:
+          Service: "cloudtrail.amazonaws.com"
+          BucketName: 
+            Ref: Bucket
+
+  Topic: 
+    Type: AWS::SNS::Topic
+    Properties: 
+      Subscription: 
+        - Protocol: email
+          Endpoint: 
+            Ref: StackDeveloperEmail
+          
+
+  TopicPolicy: 
+    Type: AWS::SNS::TopicPolicy
+    Properties: 
+      Topics: 
+        - Ref: Topic
+      PolicyDocument: 
+        DefaultTopicPolicy: 
+          Service: "cloudtrail.amazonaws.com"
+
+  Trail: 
+    DependsOn: 
+      - BucketPolicy
+      - TopicPolicy
+    Type: AWS::CloudTrail::Trail
+    Properties: 
+      S3BucketName: 
+        Ref: Bucket
+      SnsTopicName: 
+        Fn::GetAtt: Topic.TopicName
+      IsLogging: false
+      IsMultiRegionTrail: false
+
+Outputs:
+  StackDeveloper:
+    Description: The StackDeveloper
+    Value:
+      Ref: StackDeveloper
+
+  AccessKeyId:
+    Description: The AccessKeyId
+    Value:
+      Ref: AccessKey
+
+  SecretAccessKey:
+    Description: The SecretAccessKey
+    Value:
+      Fn::GetAtt: AccessKey.SecretAccessKey
+
+  Bucket: 
+    Description: The Bucket
+    Value:
+      Ref: Bucket
+
+  Trail:
+    Description: The Trail
+    Value:
+      Ref: Trail

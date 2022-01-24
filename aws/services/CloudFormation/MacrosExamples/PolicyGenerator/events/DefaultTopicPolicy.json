@@ -1,0 +1,28 @@
+{
+  "accountId": "012345678901",
+  "fragment": {
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Transform": [
+      "PolicyGenerator"
+    ],
+    "Parameters": {},
+    "Resources": {
+      "TopicPolicy": {
+        "Type": "AWS::SNS::TopicPolicy",
+        "Properties": {
+          "Topics": "CloudTrailTopic",
+          "PolicyDocument": {
+            "DefaultTopicPolicy": {
+              "Service": "cloudtrail.amazonaws.com"
+            }
+          }
+        }
+      }
+    }
+  },
+  "transformId": "012345678901::PolicyGeneratorPolicyGeneratorPolicyGenerator",
+  "requestId": "676d8364-1e54-4a9b-8086-7ee821e3d3bf",
+  "region": "eu-west-1",
+  "params": {},
+  "templateParameterValues": { }
+}

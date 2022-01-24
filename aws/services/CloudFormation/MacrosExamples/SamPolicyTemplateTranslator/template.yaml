@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  This stack provides a Cloudformation Macro that translate a SAM
+  policy template into its actual content. It is, however, not
+  limited to SAM resources.
+Resources:
+
+  SamPolicyTemplateTranslatorLayer01:
+    Type: AWS::Serverless::LayerVersion
+    Metadata:
+      BuildMethod: python3.8
+    Properties:
+      ContentUri: layers/SamPolicyTemplateTranslatorLayer01
+      CompatibleRuntimes:
+        - python3.8
+      RetentionPolicy: Delete
+
+  SamPolicyTemplateTranslatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/SamPolicyTemplateTranslator
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Layers:
+        - Ref: SamPolicyTemplateTranslatorLayer01
+
+  SamPolicyTemplateTranslatorMacro:
+      Type: AWS::CloudFormation::Macro
+      Properties:
+        Name:
+          Fn::Sub: '${AWS::StackName}'
+        Description: Translate a SAM Policy Template into its actual content
+        FunctionName:
+          Fn::GetAtt: SamPolicyTemplateTranslatorFunction.Arn

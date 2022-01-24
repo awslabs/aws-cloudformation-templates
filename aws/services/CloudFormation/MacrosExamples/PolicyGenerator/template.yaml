@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  This stack provides a Cloudformation Macro that provide a Default Policy generator (For KMS Key, S3 Bucket, etc)
+  It allows your CloudFormation template to be more redable.
+Resources:
+
+  PolicyGeneratorLayer01:
+    Type: AWS::Serverless::LayerVersion
+    Metadata:
+      BuildMethod: python3.8
+    Properties:
+      ContentUri: layers/PolicyGeneratorLayer01
+      CompatibleRuntimes:
+        - python3.8
+      RetentionPolicy: Delete
+
+  PolicyGeneratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/PolicyGenerator
+      Description: A CF Macro to generate IAM Policy for S3 Bucket, SNS Topic and KMS keys
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Layers:
+        - Ref: PolicyGeneratorLayer01
+
+  PolicyGeneratorMacro:
+      Type: AWS::CloudFormation::Macro
+      Properties:
+        Name:
+          Fn::Sub: '${AWS::StackName}'
+        Description: Translate a SAM Policy Template into its actual content
+        FunctionName:
+          Fn::GetAtt: PolicyGeneratorFunction.Arn

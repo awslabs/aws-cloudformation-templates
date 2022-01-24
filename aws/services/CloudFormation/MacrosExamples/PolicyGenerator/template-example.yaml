@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform:
+  - SamPolicyTemplateTranslator
+Parameters:
+  Administrator:
+    Type: String
+    Default: "Alice"
+  User:
+    Type: String
+    Default: "Bob"
+Resources:
+  Key:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: A key with a sane default policy
+      KeyPolicy:
+        DefaultKeyPolicy:
+          Administrator: 
+            Ref: Administrator
+          User: 
+            Ref: User
+
+  BucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: "CloudTrailBucket"
+      PolicyDocument: 
+        DefaultS3BucketPolicy:
+          Service: "cloudtrail.amazonaws.com"
+          BucketName: "CloudTrailBucket"
+
+  TopicPolicy: 
+    Type: AWS::SNS::TopicPolicy
+    Properties: 
+      Topics: "CloudTrailTopic"
+      PolicyDocument: 
+        DefaultTopicPolicy:
+          Service: "cloudtrail.amazonaws.com"
+

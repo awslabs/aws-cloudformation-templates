@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "required": [
+    "Name",
+    "Container"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "Name": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "Container": {
+      "type": "string",
+      "enum": [
+        "mp4",
+        "fmp4",
+        "ts",
+        "webm",
+        "mp3",
+        "ogg",
+        "oga",
+        "flac",
+        "mpg",
+        "flv",
+        "gif",
+        "mxf",
+        "wav",
+        "mp2"
+      ]
+    },
+    "Video": {
+      "type": "string"
+    },
+    "Audio": {
+      "type": "string"
+    },
+    "Thumbnails": {
+      "type": "string"
+    }
+  }
+}

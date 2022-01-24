@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 
+  - AWS::Serverless-2016-10-31
+  - PolicyGenerator
+Description: >
+  A sample stack used to demonstrate the use of the CloudFormationRoleGenerator
+Resources:
+
+  SampleBucket: 
+    DeletionPolicy: Delete
+    Type: AWS::S3::Bucket
+    Properties: {}
+
+  SampleBucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: 
+        Ref: SampleBucket
+      PolicyDocument: 
+        DefaultS3BucketPolicy:
+          Service: "lambda.amazonaws.com"
+          BucketName: 
+            Ref: SampleBucket
+  
+  SampleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: SampleFunction
+      Handler: app.lambda_handler
+      Runtime: python3.8
+

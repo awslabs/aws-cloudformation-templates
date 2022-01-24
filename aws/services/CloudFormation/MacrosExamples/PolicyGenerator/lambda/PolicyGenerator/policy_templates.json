@@ -1,0 +1,247 @@
+{
+    "Version": "0.0.1",
+    "Templates": {
+        "DefaultKeyPolicy": {
+            "Description": "A Sane default KMS Key Policy",
+            "Parameters": {
+                "Administrator": {
+                    "Description": "Name of the IAM User with administration priviledge on the key"
+                },
+                "User": {
+                    "Description": "Name of the IAM User with decryption / encryption priviledge on the key"
+                }
+            },
+            "Definition": {
+                "Statement": [
+                    {
+                        "Sid": "Root User has all priviledges",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": {
+                                "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+                            }
+                        },
+                        "Action": "kms:*",
+                        "Resource": "*"
+                    },
+                    {
+                        "Sid": "Allow administration of the key",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": {
+                                "Fn::Sub": [
+                                    "arn:${AWS::Partition}:iam::${AWS::AccountId}:user/${administrator}",
+                                    {
+                                        "administrator": {
+                                            "Ref": "Administrator"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "Action": [
+                            "kms:Create*",
+                            "kms:Describe*",
+                            "kms:Enable*",
+                            "kms:List*",
+                            "kms:Put*",
+                            "kms:Update*",
+                            "kms:Revoke*",
+                            "kms:Disable*",
+                            "kms:Get*",
+                            "kms:Delete*",
+                            "kms:ScheduleKeyDeletion",
+                            "kms:CancelKeyDeletion"
+                        ],
+                        "Resource": "*"
+                    },
+                    {
+                        "Sid": "Allow use of the key",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": {
+                                "Fn::Sub": [
+                                    "arn:${AWS::Partition}:iam::${AWS::AccountId}:user/${user}",
+                                    {
+                                        "user": {
+                                            "Ref": "User"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "Action": [
+                            "kms:DescribeKey",
+                            "kms:Encrypt",
+                            "kms:Decrypt",
+                            "kms:ReEncrypt*",
+                            "kms:GenerateDataKey",
+                            "kms:GenerateDataKeyWithoutPlaintext"
+                        ],
+                        "Resource": "*"
+                    }
+                ]
+            }
+        },
+        "DefaultS3BucketPolicy": {
+            "Description": "A sane default S3 Bucket Policy",
+            "Parameters": {
+                "Service": {
+                    "Description": "The service that is alllowed to Put object in that bucket"
+                },
+                "BucketName": {
+                    "Description": "The S3 bucket"
+                }
+            },
+            "Definition": {
+                "Statement": [
+                    {
+                        "Sid": "AclCheck",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": {
+                                "Ref": "Service"
+                            }
+                        },
+                        "Action": "s3:GetBucketAcl",
+                        "Resource": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "arn:aws:s3:::",
+                                    {
+                                        "Ref": "BucketName"
+                                    }
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Sid": "Write",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": {
+                                "Ref": "Service"
+                            }
+                        },
+                        "Action": "s3:PutObject",
+                        "Resource": {
+                            "Fn::Join": [
+                                "",
+                                [
+                                    "arn:aws:s3:::",
+                                    {
+                                        "Ref": "BucketName"
+                                    },
+                                    "/*"
+                                ]
+                            ]
+                        },
+                        "Condition": {
+                            "StringEquals": {
+                                "s3:x-amz-acl": "bucket-owner-full-control"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        "DefaultTopicPolicy": {
+            "Description": "A sane default SNS Topic Policy",
+            "Parameters": {
+                "Service": {
+                    "Description": "The service that is alllowed to publish to that SNS Topic"
+                }
+            },
+            "Definition": {
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": {
+                                "Ref": "Service"
+                            }
+                        },
+                        "Action": "sns:Publish",
+                        "Resource": "*"
+                    }
+                ]
+            }
+        },
+        "ServiceSQSSendMessagePolicy": {
+            "Description": "A sane default SQS Queue Policy",
+            "Parameters": {
+                "Service": {
+                    "Description": "The service that is alllowed to send to that SNS Topic"
+                },
+                "QueueName": {
+                    "Description": "The queue that is alllowed to public to that SNS Topic"
+                }
+            },
+            "Definition": {
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": {
+                                "Ref": "Service"
+                            }
+                        },
+                        "Action": "sqs:SendMessage",
+                        "Resource": {
+                            "Fn::Sub": [
+                                "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${queueName}",
+                                {
+                                    "queueName": {
+                                        "Ref": "QueueName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "ServiceSQSPollerPolicy": {
+            "Description": "A sane default SQS Queue Policy",
+            "Parameters": {
+                "Service": {
+                    "Description": "The service that is alllowed to send to that SNS Topic"
+                },
+                "QueueName": {
+                    "Description": "The queue that is alllowed to public to that SNS Topic"
+                }
+            },
+            "Definition": {
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": {
+                                "Ref": "Service"
+                            }
+                        },
+                        "Action": [
+                            "sqs:ChangeMessageVisibility",
+                            "sqs:ChangeMessageVisibilityBatch",
+                            "sqs:DeleteMessage",
+                            "sqs:DeleteMessageBatch",
+                            "sqs:GetQueueAttributes",
+                            "sqs:ReceiveMessage"
+                        ],
+                        "Resource": {
+                            "Fn::Sub": [
+                                "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${queueName}",
+                                {
+                                    "queueName": {
+                                        "Ref": "QueueName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}
