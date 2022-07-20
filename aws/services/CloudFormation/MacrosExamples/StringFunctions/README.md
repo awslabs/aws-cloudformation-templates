@@ -20,11 +20,11 @@ Resources:
       Tags:
         - Key: Upper
           Value:
-            'Fn::Transform':
-             - Name: 'String'
-               Parameters:
-                 InputString: !Ref InputString
-                 Operation: Upper
+            Fn::Transform:
+              Name: 'String'
+              Parameters:
+                InputString: !Ref InputString
+                Operation: Upper
 ```
 
 ## Available Operations
