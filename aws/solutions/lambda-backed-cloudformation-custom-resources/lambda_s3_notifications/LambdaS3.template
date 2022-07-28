@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Sample template to illustrate use of existing S3 bucket as event source for
+  Lambda function
+Parameters:
+  NotificationBucket:
+    Type: String
+    Description: S3 bucket which is used for Lambda event notification
+  LambdaCodeBucket:
+    Type: String
+    Description: S3 bucket in which custom lambda code is stored
+  LambdaCodeKey:
+    Type: String
+    Description: Zip file name in which custom lambda code is stored
+    Default: LambdaS3.zip
+  Lambdahandler:
+    Type: String
+    Description: Python file name which is packed inside the zip file
+    Default: LambdaS3
+
+Resources:
+  MainLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        ZipFile: !Join
+          - |+
+
+          - - import json
+            - 'def lambda_handler(event,context):'
+            - '    return ''Welcome... This is a test Lambda Function'''
+      FunctionName: Test-Lambda-S3
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaIAMRole.Arn
+      Runtime: python3.6
+      Timeout: 5
+
+  LambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt MainLambdaFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub 'arn:aws:s3:::${NotificationBucket}'
+
+  LambdaIAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:*'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: 'arn:aws:logs:*:*:*'
+
+  CustomLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: !Sub '${Lambdahandler}.lambda_handler'
+      Role: !GetAtt LambdaIAMRole.Arn
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Ref LambdaCodeKey
+      Runtime: python3.6
+      Timeout: 50
+
+  Lambdatrigger:
+    Type: 'Custom::RouteTableLambda'
+    DependsOn: LambdaInvokePermission
+    Properties:
+      ServiceToken: !GetAtt CustomLambdaFunction.Arn
+      LambdaArn: !GetAtt MainLambdaFunction.Arn
+      Bucket: !Ref NotificationBucket

@@ -26,9 +26,9 @@ Upload the Routetable.zip in an S3 bucket in your account. Make sure that the S3
 aws s3 cp <path-to-zip-file>/Routetable.zip s3://<s3-bucket-name>/Routetable.zip
 ```
 
-### 3. Launch CloudFormation stack using RoutaTable.template file
+### 3. Launch CloudFormation stack using RouteTable.template file
 
-Launch CloudFormation stack by passing "Bucket-Name" in which Lambda zip file us uploaded, Zip file name (say RouteTable.zip) and the Lambda file name inside zip (Routetable) as parameters. Below AWS CLI command can be used to launch stack.
+Launch CloudFormation stack by passing "Bucket-Name" in which Lambda zip file is uploaded, Zip file name (say Routetable.zip) and the Lambda file name inside zip (Routetable) as parameters. Below AWS CLI command can be used to launch stack.
 
 ```console
 aws cloudformation create-stack --stack-name myvpcstack --template-body file://RouteTable.template --parameters ParameterKey=Bucket,ParameterValue=<S3-Bucket-Name> ParameterKey=Key,ParameterValue=Routetable.zip ParameterKey=Lambdahandler,ParameterValue=Routetable --capabilities CAPABILITY_NAMED_IAM --region <region>
