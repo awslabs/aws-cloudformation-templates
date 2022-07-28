@@ -215,21 +215,21 @@ Resources:
     Properties:
       Description: Ingress from the public ALB
       GroupId: !Ref 'FargateContainerSecurityGroup'
-      IpProtocol: -1
+      IpProtocol: '-1'
       SourceSecurityGroupId: !Ref 'PublicLoadBalancerSG'
   EcsSecurityGroupIngressFromPrivateALB:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Ingress from the private ALB
       GroupId: !Ref 'FargateContainerSecurityGroup'
-      IpProtocol: -1
+      IpProtocol: '-1'
       SourceSecurityGroupId: !Ref 'PrivateLoadBalancerSG'
   EcsSecurityGroupIngressFromSelf:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Ingress from other containers in the same security group
       GroupId: !Ref 'FargateContainerSecurityGroup'
-      IpProtocol: -1
+      IpProtocol: '-1'
       SourceSecurityGroupId: !Ref 'FargateContainerSecurityGroup'
 
   # Load balancers for getting traffic to containers.
@@ -253,7 +253,7 @@ Resources:
       SecurityGroupIngress:
           # Allow access to ALB from anywhere on the internet
           - CidrIp: 0.0.0.0/0
-            IpProtocol: -1
+            IpProtocol: '-1'
   PublicLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     DependsOn: GatewayAttachement
@@ -285,8 +285,6 @@ Resources:
       VpcId: !Ref 'VPC'
   PublicLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
-    DependsOn:
-      - PublicLoadBalancer
     Properties:
       DefaultActions:
         - TargetGroupArn: !Ref 'DummyTargetGroupPublic'
@@ -308,7 +306,7 @@ Resources:
     Properties:
       Description: Only accept traffic from a container in the fargate container security group
       GroupId: !Ref 'PrivateLoadBalancerSG'
-      IpProtocol: -1
+      IpProtocol: '-1'
       SourceSecurityGroupId: !Ref 'FargateContainerSecurityGroup'
   PrivateLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -340,8 +338,6 @@ Resources:
       VpcId: !Ref 'VPC'
   PrivateLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
-    DependsOn:
-      - PrivateLoadBalancer
     Properties:
       DefaultActions:
         - TargetGroupArn: !Ref 'DummyTargetGroupPrivate'
