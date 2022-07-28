@@ -2,7 +2,7 @@
 How can I install the CloudFormation helper scripts on non Amazon Linux AMIs? 
 
 
-Summary
+## Summary
 
 How do I install the Cloudformation helper scripts in non Amazon Linux instances and how do I enable by default cfn-hup daemon in Systemd?
 Main Text
@@ -15,11 +15,10 @@ In order to use the Cloudformation helper scripts, you have to set the proper in
 
 For this you can use the easy_install command after installing both the Cloudformation bootstrap and python-setuptools packages.
 
-Resolution
- -Ubuntu 16.04 LTS
-
-     Installing helper scripts through the Userdata property:
-
+## Resolution
+Installing helper scripts through the Userdata property:
+### Ubuntu 16.04 LTS
+```
  "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
              "#!/bin/bash -xe\n",
              "apt-get install -y python-setuptools\n",
@@ -27,10 +26,10 @@ Resolution
              "wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
              "easy_install --script-dir /opt/aws/bin aws-cfn-bootstrap-latest.tar.gz\n"
               ...
-
-
- -RHEL 7
-
+```
+  
+### RHEL 7
+```
  "UserData": { "Fn::Base64" : { "Fn::Join" : ["", [
              "#!/bin/bash -xe\n",
              "apt-get update -y\n",
@@ -39,9 +38,9 @@ Resolution
              "wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
              "easy_install --script-dir /opt/aws/bin aws-cfn-bootstrap-latest.tar.gz\n"
               ...
+```
 
-
-Enabling cfn-hup in systemd.
+## Enabling cfn-hup in systemd.
 
 Using the cfn-hup daemon allows you to make configuration updates on EC2 instances without needing to launch new ones.
 
@@ -53,7 +52,7 @@ For systemd it must become a dependency of an existing boot target. You can use 
 We set the instructions in the Metadata property files Key in order to create the cfn-hup configuration file, the cfn-hup hook, and the systemd file for cfn-hup /lib/systemd/systemcfn-hup.service.
 
 We will use the commands key in order to enable the service in systemd and start it.
-
+```
   "AWS::CloudFormation::Init" : {
           "configSets" : {
             "full_install" : [ "install_and_enable_cfn_hup" ]
@@ -105,10 +104,11 @@ We will use the commands key in order to enable the service in systemd and start
               }
            }
         }
-
+```
 
 You can verify after launching the stack that cfn-hup service has been started by executing systemctl status cfn-hup.
 
+```
 systemctl status cfn-hup
 ● cfn-hup.service - cfn-hup daemon
    Loaded: loaded (/usr/lib/systemd/system/cfn-hup.service; enabled; vendor preset: disabled)
@@ -118,3 +118,4 @@ systemctl status cfn-hup
            └─4852 /usr/bin/python /opt/aws/bin/cfn-hup
 Oct 12 08:10:26 ip-172-31-44-180.ec2.internal systemd[1]: Started cfn-hup daemon.
 Oct 12 08:10:26 ip-172-31-44-180.ec2.internal systemd[1]: Starting cfn-hup daemon...
+```
