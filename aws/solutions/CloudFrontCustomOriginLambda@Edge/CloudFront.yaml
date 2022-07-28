@@ -152,7 +152,7 @@ Parameters:
       - https-only
 
   Compress:
-    Description:    CloudFront Origin Protocol Policy to apply to your origin.
+    Description:    CloudFront should support gzip compression requests: Accept-Encoding: gzip.
     Type:           String
     Default:        "false"
     AllowedValues:
