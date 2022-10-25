@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Allow CodePipeline (on a different AWS Account) to use an existing CodeCommit repository (from this account) under CodePipeline source stage.
+
+Parameters:
+  CodePipelineAccount:
+    Description: AWS AccountNumber hosting AWS CodePipeline
+    Type: Number
+  CMKARN:
+    Description: ARN of the KMS CMK creates in CodePipeline account
+    Type: String
+
+Conditions:
+  HasCMKARN: !Not
+    - !Equals
+      - ''
+      - !Ref 'CMKARN'
+
+Resources:
+  CrossAccountCodeCommitRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CrossAccountCodeCommitRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS: !Ref CodePipelineAccount
+            Action:
+              - sts:AssumeRole
+      Path: /
+  CodeCommitPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-CodeCommitPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: codecommit:*
+          Effect: Allow
+          Resource: "*"
+        - Action: s3:*
+          Effect: Allow
+          Resource: "*"
+        - !If
+          - HasCMKARN
+          - Action: kms:*
+            Effect: Allow
+            Resource: !Ref CMKARN
+          - !Ref AWS::NoValue
+      Roles:
+        - !Ref CrossAccountCodeCommitRole

@@ -1,0 +1,158 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Template to install IIS and FTP server on windows. It was validated on windows 2016'
+Parameters:
+  FTPUsername:
+    Description: FTP username to connect with
+    Type: String
+
+  FTPPassword:
+    Description: FTP password to authenticate with
+    Type: String
+
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+
+  InstanceType:
+    Default: t2.medium
+    Description: The EC2 instance type
+    Type: String
+
+Mappings:
+  InstanceRegionMap:
+    us-west-1:
+      '64': ami-076ac373ed37322db
+    us-west-2:
+      '64': ami-0dca119820006527c
+
+Resources:
+  WebServerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enables HTTP Access to EC2
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 20
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 49152
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Count: '1'
+        Timeout: PT30M
+    Properties:
+      InstanceType:
+        Ref: InstanceType
+      KeyName:
+        Ref: KeyName
+      ImageId: !FindInMap [InstanceRegionMap, !Ref 'AWS::Region', '64']
+      SecurityGroups:
+        - Ref: WebServerSecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          <powershell>
+          Start-Transcript;
+          
+          # Install IIS
+          Import-Module ServerManager;
+          Enable-WindowsOptionalFeature -Online -NoRestart -FeatureName 'IIS-WebServerRole', 'IIS-WebServer', 'IIS-ManagementConsole';
+          # Install IIS FTP Server
+          Install-WindowsFeature Web-FTP-Server -IncludeAllSubFeature
+          Import-Module WebAdministration
+          $FTPSiteName = 'Default FTP Site'
+          $FTPRootDir = 'C:\inetpub'
+          $FTPPort = 21
+          New-WebFtpSite -Name $FTPSiteName -Port $FTPPort -PhysicalPath $FTPRootDir
+
+          # Create the local Windows group
+          $FTPUserGroupName = "FTP Users"
+          $ADSI = [ADSI]"WinNT://$env:ComputerName"
+          $FTPUserGroup = $ADSI.Create("Group", "$FTPUserGroupName")
+          $FTPUserGroup.SetInfo()
+          $FTPUserGroup.Description = "Members of this group can connect through FTP"
+          $FTPUserGroup.SetInfo()
+
+          # Create an FTP user
+          $FTPUserName = "${FTPUsername}"
+          $FTPPassword = "${FTPPassword}"
+          $CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
+          $CreateUserFTPUser.SetInfo()
+          $CreateUserFTPUser.SetPassword("$FTPPassword")
+          $CreateUserFTPUser.SetInfo()
+
+          # Add an FTP user to the group FTP Users
+          $UserAccount = New-Object System.Security.Principal.NTAccount("$FTPUserName")
+          $SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
+          $Group = [ADSI]"WinNT://$env:ComputerName/$FTPUserGroupName,Group"
+          $User = [ADSI]"WinNT://$SID"
+          $Group.Add($User.Path)
+
+          # Enable basic authentication on the FTP site
+          $FTPSitePath = "IIS:\Sites\$FTPSiteName"
+          $BasicAuth = 'ftpServer.security.authentication.basicAuthentication.enabled'
+          Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
+          # Add an authorization read rule for FTP Users.
+          $Param = @{
+              Filter   = "/system.ftpServer/security/authorization"
+              Value    = @{
+                  accessType  = "Allow"
+                  roles       = "$FTPUserGroupName"
+                  permissions = 3
+              }
+              PSPath   = 'IIS:\'
+              Location = $FTPSiteName
+          }
+          Add-WebConfiguration @param
+
+          $SSLPolicy = @(
+              'ftpServer.security.ssl.controlChannelPolicy',
+              'ftpServer.security.ssl.dataChannelPolicy'
+          )
+          Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[0] -Value $false
+          Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false
+
+          $UserAccount = New-Object System.Security.Principal.NTAccount("$FTPUserGroupName")
+          $AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new($UserAccount,
+              'FullControl',
+              'ContainerInherit,ObjectInherit',
+              'None',
+              'Allow'
+          )
+          $ACL = Get-Acl -Path $FTPRootDir
+          $ACL.SetAccessRule($AccessRule)
+          $ACL | Set-Acl -Path $FTPRootDir
+
+          # https://serverfault.com/questions/571871/directory-listing-not-rendered-when-connecting-to-ec2-windows-2012-instance
+          $ip = Invoke-WebRequest -Uri "http://169.254.169.254/latest/meta-data/public-ipv4" -UseBasicParsing | Select-Object -Expand Content
+          Set-WebConfigurationProperty -filter "/system.applicationHost/sites/siteDefaults/ftpServer/firewallSupport" -name externalIp4Address -value $ip
+          Set-WebConfigurationProperty -filter "/system.applicationHost/sites/site[@name='$FTPSiteName']/ftpServer/firewallSupport" -name externalIp4Address -value $ip
+
+          # Restart the FTP site for all changes to take effect
+          Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
+          Restart-Service FTPSVC
+          </powershell>
+
+          <script>
+          cfn-signal.exe -e %ERRORLEVEL% --resource EC2Instance --stack ${AWS::StackName} --region ${AWS::Region}
+          </script>
+
+Outputs:
+  PublicIp:
+    Description: Public IP
+    Value: !GetAtt 'EC2Instance.PublicIp'

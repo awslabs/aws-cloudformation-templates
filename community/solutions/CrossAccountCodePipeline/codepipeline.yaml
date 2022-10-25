@@ -1,0 +1,210 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Create CodePipeline with source stage (from CodeCommit on a different AWS Account) and Deploy using AWS Beanstalk.
+
+Parameters:
+  ApplicationName:
+    Description: AWS Beanstalk Application name
+    Type: String
+  EnvironmentName:
+    Description: AWS Beanstalk Environment name
+    Type: String
+  CodeCommitAccount:
+    Description: AWS AccountNumber hosting AWS CodeCommit
+    Type: Number
+  Repo:
+    Description: Name of the AWS CodeCommit repository
+    Type: String
+  Branch:
+    Description: CodeCommit Repository Branch Name
+    Type: String
+
+Resources:
+  KMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Used by Assumed Roles in CodeCommit & CodePipeline account to Encrypt/Decrypt code
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: !Ref AWS::StackName
+        Statement:
+          -
+            Sid: Allows admin of the key
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - "kms:*"
+            Resource: "*"
+          -
+            Sid: Allow use of the key for CodePipeline
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${CodeCommitAccount}:role/CrossAccountCodeCommitRole
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+  KMSAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/codepipeline-crossaccounts
+      TargetKeyId: !Ref KMSKey
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ArtifactS3Bucket
+      PolicyDocument:
+        Statement:
+          -
+            Action:
+              - s3:*
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::${ArtifactS3Bucket}
+              - !Sub arn:aws:s3:::${ArtifactS3Bucket}/*
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${CodeCommitAccount}:role/CrossAccountCodeCommitRole
+                - !GetAtt 'CodeBuildServiceRole.Arn'
+                - !GetAtt 'CodePipelineServiceRole.Arn'
+  ArtifactS3Bucket:
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+    DeletionPolicy: Retain
+    Type: AWS::S3::Bucket
+  CodeBuild:
+    Properties:
+      EncryptionKey: !GetAtt 'KMSKey.Arn'
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        PrivilegedMode: true
+        Image: aws/codebuild/standard:2.0
+        Type: LINUX_CONTAINER
+      Cache:
+        Type: LOCAL
+        Modes:
+          - LOCAL_SOURCE_CACHE
+      ServiceRole: !GetAtt 'CodeBuildServiceRole.Arn'
+      Source:
+        Type: CODEPIPELINE
+    Type: AWS::CodeBuild::Project
+  CodeBuildServiceRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      Path: /service-role/
+    Type: AWS::IAM::Role
+  CodePipeline:
+    Properties:
+      Name: !Ref 'AWS::StackName'
+      ArtifactStore:
+        Location: !Ref 'ArtifactS3Bucket'
+        EncryptionKey:
+          Id: !GetAtt 'KMSKey.Arn'
+          Type: KMS
+        Type: S3
+      RestartExecutionOnUpdate: false
+      RoleArn: !GetAtt 'CodePipelineServiceRole.Arn'
+      Stages:
+        - Actions:
+            - ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeCommit
+                Version: '1'
+              Configuration:
+                RepositoryName: !Ref 'Repo'
+                BranchName: !Ref 'Branch'
+                PollForSourceChanges: true
+              Name: GetCodebase
+              OutputArtifacts:
+                - Name: ApplicationSource
+              RoleArn: !Sub arn:aws:iam::${CodeCommitAccount}:role/CrossAccountCodeCommitRole
+              RunOrder: 1
+          Name: GetSource
+        - Actions:
+            - ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref 'CodeBuild'
+              InputArtifacts:
+                - Name: ApplicationSource
+              Name: Build
+              OutputArtifacts:
+                - Name: BuildArtifact
+              RunOrder: 1
+          Name: Build
+        - Actions:
+            - ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: ElasticBeanstalk
+                Version: '1'
+              Configuration:
+                ApplicationName: !Ref 'ApplicationName'
+                EnvironmentName: !Ref 'EnvironmentName'
+              InputArtifacts:
+                - Name: BuildArtifact
+              Name: Deploy
+              RunOrder: 1
+          Name: Deploy
+    Type: AWS::CodePipeline::Pipeline
+  CodePipelineServiceRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AWSCodePipelineFullAccess
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkFullAccess
+      Path: /
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action:
+                  - kms:Decrypt
+                Effect: Allow
+                Resource: '*'
+              - Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                Effect: Allow
+                Resource: '*'
+              - Action:
+                  - sts:AssumeRole
+                Effect: Allow
+                Resource: !Sub arn:aws:iam::${CodeCommitAccount}:role/CrossAccountCodeCommitRole
+            Version: '2012-10-17'
+          PolicyName: !Join
+            - '-'
+            - - CodePipeline
+              - !Ref 'AWS::StackName'
+    Type: AWS::IAM::Role
+
+Outputs:
+  CMK:
+    Value: !GetAtt 'KMSKey.Arn'
