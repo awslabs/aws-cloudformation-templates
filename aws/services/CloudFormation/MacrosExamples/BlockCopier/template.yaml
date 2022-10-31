@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Block Copier
+  A macro to copy blocks of template from one location to another
+Resources:
+  MacroFunctionLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      RetentionInDays: 14
+      LogGroupName: !Join ["", ["/aws/lambda/", !Ref MacroLambdaFunction]]
+  MacroFunctionPermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt MacroLambdaFunction.Arn
+      Principal: 'cloudformation.amazonaws.com'
+  MacroLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+            - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+        Version: 2012-10-17
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  MacroLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda
+      Handler: lambda_function.handler
+      Runtime: python3.7
+      Timeout: 5          
+      Role: !GetAtt 'MacroLambdaExecutionRole.Arn'      
+  Macro:
+    Type: AWS::CloudFormation::Macro
+    Properties:
+      Name: BlockCopier
+      FunctionName: !GetAtt MacroLambdaFunction.Arn

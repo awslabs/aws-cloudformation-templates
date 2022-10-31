@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform:
+  - BlockCopier
+Resources:
+  BucketWithTags:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags:
+        - Key: Bucket Name
+          Value: BucketOne
+        - Key: Username
+          Value: Test user one
+        - Key: Another string to change
+          Value: Part or all of this string can be changed to a different value
+  BucketWithoutTags:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags:
+         BlockCopier: 
+            Path: $.Resources.BucketWithTags.Properties.Tags
+            Replacements:
+              - Original: BucketOne
+                Replacement: BucketTwo
+              - Original: Test user one
+                Replacement: Test user two
+              - Original: or all of this string can be
+                Replacement: of this string has been
+

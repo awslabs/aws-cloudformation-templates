@@ -1,0 +1,3 @@
+[console_scripts]
+jsonpath.py = jsonpath_ng.bin.jsonpath:entry_point
+
