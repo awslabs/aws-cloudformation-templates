@@ -1,4 +1,13 @@
 # StackSetsResource
+
+----
+
+## Built-in Stack Set Resource 
+
+Before you use the custom resource in this repository, see the AWS CloudFormation [AWS::CloudFormation::StackSet](https://docs.aws.amazon.com/en_us/AWSCloudFormation/latest/UserGuide/aws-resource-cloudformation-stackset.html) resource.  This built-in resource was made available in September, 2020.
+
+----
+
 AWS CloudFormation Lambda-backed Custom Resource for launching StackSets.
 
 The lambda function is written in Python and based on the  [crhelper.py](https://github.com/awslabs/aws-cloudformation-templates/tree/master/community/custom_resources/python_custom_resource_helper) Custom Resource framework.
