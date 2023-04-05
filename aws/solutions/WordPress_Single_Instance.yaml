@@ -34,7 +34,7 @@ Parameters:
     Type: String
   DBPassword:
     AllowedPattern: '[a-zA-Z0-9]+'
-    ConstraintDescription: must contain only alphanumeric characters.
+    ConstraintDescription: must contain only alphanumeric characters. Valid length is 8-41 characters
     Description: The WordPress database admin account password
     MaxLength: '41'
     MinLength: '8'
@@ -42,7 +42,7 @@ Parameters:
     Type: String
   DBRootPassword:
     AllowedPattern: '[a-zA-Z0-9]+'
-    ConstraintDescription: must contain only alphanumeric characters.
+    ConstraintDescription: must contain only alphanumeric characters. Valid length is 8-41 characters
     Description: MySQL root password
     MaxLength: '41'
     MinLength: '8'
@@ -63,6 +63,13 @@ Parameters:
     - t2.small
     - t2.medium
     - t2.large
+    - t3.nano
+    - t3.micro
+    - t3.small
+    - t3.medium
+    - t3.large
+    - t3.xlarge
+    - t3.2xlarge
     - m3.medium
     - m3.large
     - m3.xlarge
@@ -101,7 +108,7 @@ Parameters:
     - cr1.8xlarge
     - cc2.8xlarge
     ConstraintDescription: must be a valid EC2 instance type.
-    Default: t2.nano
+    Default: t3.nano
     Description: WebServer EC2 instance type
     Type: String
   KeyName:
@@ -204,6 +211,18 @@ Mappings:
       Arch: HVM64
     t2.small:
       Arch: HVM64
+    t3.nano:
+      Arch: HVM64
+    t3.micro:
+      Arch: HVM64
+    t3.small:
+      Arch: HVM64
+    t3.medium:
+      Arch: HVM64
+    t3.large:
+      Arch: HVM64
+    t3.2xlarge:
+      Arch: HVM64
   AWSRegionArch2AMI:
     ap-northeast-1:
       HVM64: ami-383c1956
@@ -238,6 +257,9 @@ Mappings:
     us-west-2:
       HVM64: ami-f0091d91
       HVMG2: ami-315f4850
+    af-south-1:
+      HVM64: ami-0576c852ff9d8e746
+      HVMG2: NOT_SUPPORTED
 Resources:
   WebServer:
     Type: AWS::EC2::Instance
