@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: tests String macro functions
+Parameters:
+  Date:
+    Description: "Date for this test (ISO 8601 format)"
+    Type: String
+    AllowedPattern: "^$|^\\d{4}(-\\d\\d(-\\d\\d(T\\d\\d:\\d\\d(:\\d\\d)?(\\.\\d+)?(([+-]\\d\\d:\\d\\d)|Z)?)?)?)?$"
+    Default: ""
+  Date2:
+    Description: "Second date for test to use (ISO 8601 format)"
+    Type: String
+    AllowedPattern: "^$|^\\d{4}(-\\d\\d(-\\d\\d(T\\d\\d:\\d\\d(:\\d\\d)?(\\.\\d+)?(([+-]\\d\\d:\\d\\d)|Z)?)?)?)?$"
+    Default: ""
+  Days:
+    Description: "Days"
+    Type: Number
+    Default: 1
+
+Resources:
+  S3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      Tags:
+        - Key: Current
+          Value:
+            'Fn::Transform':
+             - Name: 'Date'
+               Parameters:
+                 Date: !Ref Date
+                 Operation: Current
+        - Key: Add
+          Value:
+            'Fn::Transform':
+             - Name: 'Date'
+               Parameters:
+                 Date: !Ref Date
+                 Days: !Ref Days
+                 Operation: Add
+        - Key: Subtract
+          Value:
+            'Fn::Transform':
+             - Name: 'Date'
+               Parameters:
+                 Date: !Ref Date
+                 Days: !Ref Days
+                 Operation: Subtract
+        - Key: Days
+          Value:
+            'Fn::Transform':
+             - Name: 'Date'
+               Parameters:
+                 Date: !Ref Date
+                 Date2: !Ref Date2
+                 Operation: Days

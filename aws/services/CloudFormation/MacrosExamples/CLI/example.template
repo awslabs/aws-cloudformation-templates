@@ -1,0 +1,19 @@
+Transform: CLI
+
+Parameters:
+  BucketName:
+    Type: String
+    Default: !Sub ${AWS::AccountId}-cli-bucket
+
+Resources:
+  CLIBucket:
+    Type: CLI::Resource
+    Command: !Sub s3 mb s3://${BucketName}
+    Value: !Ref BucketName
+
+Outputs:
+  BucketRegion:
+    Value:
+      Fn::CLI:
+        Command: !Sub s3 get-bucket-location --bucket s3
+        ValuePath: LocationConstraint

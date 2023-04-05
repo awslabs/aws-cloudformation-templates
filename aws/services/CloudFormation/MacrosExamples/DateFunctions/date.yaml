@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Template for date macro for Cloudformation. Provides functions for date manipulation in your CloudFormation templates
+  including getting the current date, and doing date math. Written in Python.
+
+Resources:
+  # Role for transformation
+  TransformExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [lambda.amazonaws.com]
+            Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: ['logs:*']
+                Resource: 'arn:aws:logs:*:*:*'
+
+  # Function we use for transformaton
+  TransformFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import traceback
+          import datetime
+          import time
+
+
+
+          def handler(event, context):
+              response = {
+                  "requestId": event["requestId"],
+                  "status": "success"
+              }
+              try:
+
+                  utc_offset_sec = time.altzone if time.localtime().tm_isdst else time.timezone
+                  utc_offset = datetime.timedelta(seconds=-utc_offset_sec)
+
+                  # Operation we are being asked to do
+                  operation = event["params"]["Operation"]
+
+                  # Value to work with
+                  if "Date" in event["params"] and event["params"]["Date"]:
+                    inputDate = datetime.datetime.fromisoformat(event["params"]["Date"]);
+                  else:
+                    inputDate = datetime.datetime.now()
+
+                  # Value to work with for deltas
+                  if "Date2" in event["params"] and event["params"]["Date2"]:
+                    inputDate2 = datetime.datetime.fromisoformat(event["params"]["Date2"]);
+                  else:
+                    inputDate2 = datetime.datetime.now()
+
+                  # Value for days for subtraction or addition.
+                  if "Days" in event["params"] and event["params"]["Days"]:
+                    inputDays = event["params"]["Days"]
+                  else:
+                    inputDays = "0"
+
+                  # Operations we support
+                  no_param_date_funcs = ["Current", "Add", "Subtract", "Days"]
+
+                  # If it's one of the supported ones, do the logic ...
+                  if operation in no_param_date_funcs:
+                      # Make sure the inputDays is an integer
+                      inputDays = int(inputDays)
+
+                      # Add days logic
+                      if operation == "Add":
+                        inputDate = inputDate + datetime.timedelta(days=inputDays)
+
+                      # Subtract days logic
+                      if operation == "Subtract":
+                        inputDate = inputDate - datetime.timedelta(days=inputDays)
+
+                      # Days between logic
+                      if operation == "Days":
+                        outputDays = (inputDate.date() - inputDate2.date()).days
+                        response["fragment"] = str(outputDays)
+                      else:
+                        # Get the ISO date for the input value
+                        response["fragment"] = inputDate.replace(tzinfo=datetime.timezone(offset=utc_offset)).replace(microsecond=0).isoformat()
+                  else:
+                      response["status"] = "failure"
+              except Exception as e:
+                  traceback.print_exc()
+                  response["status"] = "failure"
+                  response["errorMessage"] = str(e)
+              return response
+
+      Handler: index.handler
+      Runtime: python3.7
+      Role: !GetAtt TransformExecutionRole.Arn
+
+  # Tranform function permissions
+  TransformFunctionPermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt TransformFunction.Arn
+      Principal: 'cloudformation.amazonaws.com'
+
+  # Macro for our date function(s)
+  Transform:
+    Type: AWS::CloudFormation::Macro
+    Properties:
+      Name: 'Date'
+      Description: Provides date processing functions
+      FunctionName: !GetAtt TransformFunction.Arn
+
