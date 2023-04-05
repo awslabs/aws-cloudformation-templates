@@ -31,7 +31,7 @@ aws cloudformation deploy \
 ```shell
 aws cloudformation deploy \
     --stack-name Explode-test \
-    --template-file test.yaml \
+    --template-file test.yml \
     --capabilities CAPABILITY_IAM
 ```
 
