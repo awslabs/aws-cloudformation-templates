@@ -381,7 +381,7 @@ Resources:
               - 'ec2:DetachNetworkInterface'
 
               # Rules which allow ECS to update load balancers on your behalf
-              # with the information sabout how to send traffic to your containers
+              # with the information about how to send traffic to your containers
               - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
               - 'elasticloadbalancing:DeregisterTargets'
               - 'elasticloadbalancing:Describe*'
