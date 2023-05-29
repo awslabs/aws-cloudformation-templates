@@ -1,0 +1,80 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Aurora serverless cluster
+
+Parameters:
+  DatabaseName:
+    Type: String
+  EngineVersion:
+    Type: String
+    Default: '10.7'
+  MasterUsername:
+    Type: String
+    Default: root
+  MasterUserPassword:
+    Type: String
+    NoEcho: true
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  DBSubnetGroupDescription:
+    Type: String
+    Default: Private VPC DB Subnet for Aurora Serverless
+  DBSubnetGroupName:
+    Type: String
+    Default: private-db-subnet-group
+  PrivateSubnet1ID:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2ID:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet3ID:
+    Type: AWS::EC2::Subnet::Id  
+
+Resources:
+  DBSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Aurora Serverless VPC Security Group
+      GroupName: Aurora-Serverless-Server-Group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 5432
+        ToPort: 5432
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 5432
+        ToPort: 5432
+        CidrIp: 0.0.0.0/0
+  Cluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      Engine: aurora-postgresql
+      EngineMode: serverless
+      EnableHttpEndpoint: true
+      DBSubnetGroupName: !Ref DBSubnetGroupName
+      EngineVersion: !Ref EngineVersion
+      DatabaseName: !Ref DatabaseName
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      DBClusterIdentifier: !Ref AWS::StackName
+      BackupRetentionPeriod: 1
+      DeletionProtection: false
+      VpcSecurityGroupIds:
+        - !GetAtt DBSecGroup.GroupId
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties: 
+      DBSubnetGroupDescription: !Ref DBSubnetGroupDescription
+      DBSubnetGroupName: !Ref DBSubnetGroupName
+      SubnetIds: 
+        - !Ref PrivateSubnet1ID
+        - !Ref PrivateSubnet2ID
+        - !Ref PrivateSubnet3ID
+        
+Outputs:
+  Name:
+    Value: !Ref DatabaseName
+    Export:
+      Name: !Sub '${AWS::StackName}Name'
