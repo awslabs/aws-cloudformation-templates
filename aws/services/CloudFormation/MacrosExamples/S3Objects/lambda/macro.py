@@ -81,6 +81,7 @@ def handler(event, context):
         return {
             "requestId": event["requestId"],
             "status": "failure",
+            "errorMessage": str(e),
             "fragment": event["fragment"],
         }
 
