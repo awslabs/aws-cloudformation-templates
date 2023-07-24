@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "This cloudformation sample template helps you to patch your AmazonLinux2 instances 
+by creating a custom PatchBaseline in SystemsManager and then it creates a target and a task to 
+execute in a maintenance window."
+
+Resources:
+    SSMPatchBaseline:
+        Type: "AWS::SSM::PatchBaseline"
+        Properties:
+            Name: "NewCustomBaseline"
+            OperatingSystem: "AMAZON_LINUX_2"
+            PatchGroups: 
+              - "dev"
+            ApprovalRules:
+              PatchRules:
+              - PatchFilterGroup:
+                  PatchFilters:
+                  - Values:
+                    - '*'
+                    Key: PRODUCT
+                  - Values:
+                    - '*'
+                    Key: CLASSIFICATION
+                  - Values:
+                    - '*'
+                    Key: SEVERITY
+                ApproveAfterDays: 7
+
+    SSMMaintenanceWindow:
+        Type: "AWS::SSM::MaintenanceWindow"
+        Properties:
+            Name: "DevPatchingWindow"
+            Schedule: "cron(0 0 8 ? * * *)"
+            Duration: 2
+            Cutoff: 1
+            AllowUnassociatedTargets: false
+
+    SSMMaintenanceWindowTarget:
+        Type: "AWS::SSM::MaintenanceWindowTarget"
+        Properties:
+            WindowId: !Ref SSMMaintenanceWindow
+            ResourceType: "INSTANCE"
+            Targets: 
+              - 
+                Key: tag:Patch Group
+                Values: 
+                  - "dev"
+            Name: "DevTargetGroup"
+
+    SSMMaintenanceWindowTask:
+        Type: "AWS::SSM::MaintenanceWindowTask"
+        Properties:
+            WindowId: !Ref SSMMaintenanceWindow
+            Targets:
+              - 
+                Key: "WindowTargetIds"
+                Values:
+                  - !Ref SSMMaintenanceWindowTarget
+            TaskArn: "AWS-RunPatchBaseline"
+            ServiceRoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/aws-service-role/ssm.amazonaws.com/AWSServiceRoleForAmazonSSM"
+            TaskType: "RUN_COMMAND"
+            Priority: 1
+            MaxConcurrency: "2"
+            MaxErrors: "1"
+            Name: "DevPatchTask"
+            TaskInvocationParameters:
+                MaintenanceWindowRunCommandParameters:
+                    Parameters:
+                        Operation:
+                          - "Install"
+                        RebootOption:
+                          - "RebootIfNeeded"
+                    TimeoutSeconds: 600
