@@ -1,0 +1,189 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Lambda For each IPs creats an ENI Resource
+Parameters:
+  ipList:
+    Description: >-
+      Any list of inputs in this case it is IPs as the lambda will create ENIs
+      for each IP
+    Type: CommaDelimitedList
+    Default: '172.31.32.41,172.31.32.42,172.31.32.43'
+  subnet:
+    Description: The Subnet Group
+    Type: 'AWS::EC2::Subnet::Id'
+  security:
+    Description: The Security Group
+    Type: 'AWS::EC2::SecurityGroup::Id'
+Resources:
+  IamRoleLambda:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:CreateTags'
+                  - 'ec2:DescribeNetworkInterfaces'
+                  - 'ec2:DeleteNetworkInterface'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+  IPsTrigger:
+    DependsOn:
+      - CrudIPs
+    Type: 'Custom::IPs'
+    Properties:
+      ServiceToken: !GetAtt 
+        - CrudIPs
+        - Arn
+      ips: !Ref ipList
+      subnets: !Ref subnet
+      securitys: !Ref security
+  CrudIPs:
+    Type: 'AWS::Lambda::Function'
+    DeletionPolicy: Delete
+    DependsOn:
+      - IamRoleLambda
+    Properties:
+      Code:
+        ZipFile: !Join 
+          - |+
+
+          - - var AWS = require('aws-sdk');
+            - var ec2 = new AWS.EC2();
+            - var response = require('cfn-response');
+            - ''
+            - 'exports.handler = function (event, context) {'
+            - '    console.log(''Req:\n'', JSON.stringify(event));'
+            - ''
+            - '    var responseData = {};'
+            - ''
+            - '    //Create Event '
+            - '    if (event.RequestType == ''Create'') {'
+            - '        var NUM = event.ResourceProperties.ips;'
+            - '        var SUB = event.ResourceProperties.subnets;'
+            - '        var SEC = event.ResourceProperties.securitys;'
+            - ''
+            - '        NUM.forEach(function (value) {'
+            - '            console.log(value);'
+            - '            var params = {'
+            - '                SubnetId: SUB,'
+            - '                PrivateIpAddress: value,'
+            - '                Groups: [SEC]'
+            - '            };'
+            - ''
+            - '            //Create ENI'
+            - '            ec2.createNetworkInterface(params, function (err, data) {'
+            - '                if (err) {'
+            - '                    responseData = { Error: ''Create failed'' };'
+            - '                    console.log(responseData.Error + '':\n'', err);'
+            - '                    response.send(event, context, response.FAILED, responseData);'
+            - '                }'
+            - '                else {'
+            - '                    //Add Tag                    '
+            - '                    console.log(data);'
+            - '                    var ENItoTag = data.NetworkInterface[''NetworkInterfaceId''];'
+            - ''
+            - '                    var paramTags = {'
+            - '                        Resources: ['
+            - '                            ENItoTag'
+            - '                        ],'
+            - '                        Tags: ['
+            - '                            {'
+            - '                                Key: ''ENIs-Test-Stack'','
+            - '                                Value: '''''
+            - '                            }'
+            - '                        ]'
+            - '                    };'
+            - '                    ec2.createTags(paramTags, function (err, data) {'
+            - '                        if (err) {'
+            - '                            responseData = { Error: ''Tag failed'' };'
+            - '                            console.log(responseData.Error + '':\n'', err);'
+            - '                            response.send(event, context, response.FAILED, responseData);'
+            - '                        }'
+            - '                        else {'
+            - '                            response.send(event, context, response.SUCCESS, responseData);'
+            - '                        }'
+            - '                    });'
+            - '                }'
+            - '            });'
+            - '        });'
+            - '    }'
+            - ''
+            - '    //Delete Event '
+            - '    if (event.RequestType == ''Delete'') {'
+            - '        var NUM = event.ResourceProperties.ips;'
+            - '        NUM.forEach(function (value) {'
+            - '            console.log(value);'
+            - ''
+            - '            //filters'
+            - '            var params = {'
+            - '                Filters: ['
+            - '                    {'
+            - '                        Name: ''addresses.private-ip-address'','
+            - '                        Values: ['
+            - '                            value'
+            - '                        ]'
+            - '                    },'
+            - '                    {'
+            - '                        Name: ''tag-key'','
+            - '                        Values: [''ENIs-Test-Stack'']'
+            - '                    }'
+            - '                ]'
+            - '            };'
+            - ''
+            - '            //get ENIs'
+            - '            ec2.describeNetworkInterfaces(params, function (err, data) {'
+            - '                if (err) {'
+            - '                    responseData = { Error: ''Describe failed'' };'
+            - '                    console.log(responseData.Error + '':\n'', err);'
+            - '                    response.send(event, context, response.FAILED, responseData);'
+            - '                }'
+            - '                else {'
+            - '                    var ENItoDelete = data.NetworkInterfaces[0][''NetworkInterfaceId''];'
+            - ''
+            - '                    var paramsdel = {'
+            - '                        NetworkInterfaceId: ENItoDelete'
+            - '                    };'
+            - ''
+            - '                    //delete'
+            - '                    ec2.deleteNetworkInterface(paramsdel, function (err, data) {'
+            - '                        if (err) {'
+            - '                            responseData = { Error: ''Delete failed'' };'
+            - '                            console.log(responseData.Error + '':\n'', err);'
+            - '                            response.send(event, context, response.FAILED, responseData);'
+            - '                        }'
+            - '                        else {'
+            - '                            response.send(event, context, response.SUCCESS, responseData);'
+            - '                        }'
+            - '                    });'
+            - '                }'
+            - '            });'
+            - ''
+            - '        });'
+            - '    }'
+            - '};'
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt 
+        - IamRoleLambda
+        - Arn
+      Runtime: nodejs8.10
+      Timeout: 30

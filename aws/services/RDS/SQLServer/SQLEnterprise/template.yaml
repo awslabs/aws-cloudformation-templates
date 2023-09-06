@@ -1,0 +1,1350 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Service Broker - Amazon RDS Microsoft SQL Server Enterprise'
+
+###############################################################################
+# MetaData - ServiceBroker 
+############################################################################### 
+
+Metadata:
+  AWS::ServiceBroker::Specification:
+    Version: 1.0
+    Tags:
+    - AWS        
+    - MSSQL
+    - database
+    Name: rdsmssql
+    DisplayName: Amazon RDS Microsoft SQL Server Enterprise
+    LongDescription: SQL Server is a relational database management system developed by Microsoft. Amazon RDS for SQL Server makes it easy to set up, operate, and scale SQL Server deployments in the cloud. With Amazon RDS, you can deploy multiple editions of SQL Server (2008 R2, 2012, 2014, 2016, and 2017) including Express, Web, Standard     and Enterprise, in minutes with cost-efficient and re-sizable compute capacity. Amazon RDS frees you up to focus on application development by managing time-consuming database     administration tasks including provisioning, backups, software patching, monitoring, and hardware scaling.
+    ImageUrl: https://s3.amazonaws.com/awsservicebroker/icons/AmazonRDS_LARGE.png
+    DocumentationUrl: hhttps://aws.amazon.com/rds/sqlserver/
+    ProviderDisplayName: Amazon Web Services
+    ServicePlans:
+      production:
+        DisplayName: Production
+        Description: Configuration designed for production deployments
+        LongDescription: Creates an Amazon RDS Microsoft SQL Server Enterprise optimised for
+          production use
+        Cost: https://aws.amazon.com/rds/sqlserver/pricing/
+        ParameterValues:          
+          MultiAZ: 'true'
+          NumberOfAvailabilityZones: '2'
+          AvailabilityZones: Auto
+          CidrSize: '27'
+          CidrBlocks: Auto
+          PortNumber: 1433
+          StorageEncrypted: 'true'
+          StorageType: io1
+          CopyTagsToSnapshot: 'true'
+          BackupRetentionPeriod: 35
+          MonitoringInterval: '1'
+          AllowMajorVersionUpgrade: 'false'
+          AutoMinorVersionUpgrade: 'true'
+          MasterUsername: master
+          MasterUserPassword: Auto
+      dev:
+        DisplayName: Development
+        Description: Configuration designed for development and testing deployments
+        LongDescription: Creates an Amazon RDS Microsoft SQL Server Enterprise optimised for
+          dev/test use
+        Cost: https://aws.amazon.com/rds/sqlserver/pricing/
+        ParameterValues:          
+          MultiAZ: 'false'
+          NumberOfAvailabilityZones: '2'
+          AvailabilityZones: Auto
+          CidrSize: '28'
+          CidrBlocks: Auto          
+          PortNumber: 1433
+          StorageEncrypted: 'true'
+          StorageType: io1
+          CopyTagsToSnapshot: 'false'
+          BackupRetentionPeriod: 0
+          MonitoringInterval: '60'
+          AllowMajorVersionUpgrade: 'false'
+          AutoMinorVersionUpgrade: 'true'
+          MasterUsername: master
+          MasterUserPassword: Auto
+          PreferredBackupWindow: 04:00-06:00
+          PreferredMaintenanceWindowDay: Sat
+          PreferredMaintenanceWindowStartTime: 06:00
+          PreferredMaintenanceWindowEndTime: 07:00
+      custom:
+        DisplayName: Custom
+        Description: Custom Configuration for Advanced deployments
+        LongDescription: Creates an Amazon RDS Microsoft SQL Server Enterprise with custom
+          configuration
+        Cost: https://aws.amazon.com/rds/sqlserver/pricing/
+        ParameterValues: {}
+
+
+###############################################################################
+# Parameter groups
+###############################################################################
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Database Instance Specifications
+      Parameters:
+      - DBInstanceClass
+      - AllocatedStorageAndIops
+    - Label:
+        default: Database Options
+      Parameters:
+      - EngineVersion
+      - ServerTimezone
+      - MultiAZ
+      - PortNumber
+      - MasterUsername
+      - MasterUserPassword
+    - Label:
+        default: Network and Security
+      Parameters:
+      - VpcId
+      - PubliclyAccessible
+      - AccessCidr
+      - CidrBlocks
+      - CidrSize
+      - AvailabilityZones
+      - NumberOfAvailabilityZones
+    - Label:
+        default: Backup
+      Parameters:
+      - PreferredBackupWindow
+    - Label:
+        default: Maintenance
+      Parameters:
+      - PreferredMaintenanceWindowDay
+      - PreferredMaintenanceWindowStartTime
+      - PreferredMaintenanceWindowEndTime
+    ParameterLabels:
+      MasterUsername:
+        default: Master Username
+      MasterUserPassword:
+        default: Master User Password
+      CidrBlocks:
+        default: CIDR Blocks
+      CidrSize:
+        default: CIDR Size
+      AvailabilityZones:
+        default: Availability Zones
+      NumberOfAvailabilityZones:
+        default: Number Of Availability Zones
+      MultiAZ:
+        default: Multi AZ
+      PortNumber:
+        default: Port Number
+      DBInstanceClass:
+        default: DB Instance Class
+      AllocatedStorageAndIops:
+        default: Allocated Storage And IOPS
+      EngineVersion:
+        default: Engine Version
+      ServerTimezone:
+        default: Server Timezone
+      VpcId:
+        default: VPC Id
+      PubliclyAccessible:
+        default: Publicly Accessible
+      AccessCidr:
+        default: Access CIDR
+      PreferredBackupWindow:
+        default: Preferred Backup Window
+      PreferredMaintenanceWindowDay:
+        default: Preferred Maintenance Window Day
+      PreferredMaintenanceWindowStartTime:
+        default: Preferred MaintenanceWindow Start Time
+      PreferredMaintenanceWindowEndTime:
+        default: Preferred Maintenance Window End Time
+
+###############################################################################
+# Parameters 
+###############################################################################  
+
+Parameters:
+  AccessCidr:
+    Description: CIDR block to allow to connect to database
+    Type: String
+
+  AllocatedStorageAndIops:
+    Description: Storage/IOPS to allocate (RDS SQL Server EX supports 1000-32000PIOPS and 100GiB to 16000GiB)
+    Type: String
+    Default: 100GB 1000IOPS
+    AllowedValues:
+    - 100GB 1000IOPS
+    - 300GB 3000IOPS
+    - 600GB 6000IOPS
+    - 1000GB 10000IOPS
+    - 1500GB 15000IOPS
+    - 2000GB 20000IOPS
+    - 3000GB 30000IOPS
+    - 4000GB 32000IOPS
+    - 6000GB 32000IOPS
+
+  AllowMajorVersionUpgrade:
+    Description: If you update the EngineVersion property to a version that's different
+      from the DB instance's current major version, set this property to True.
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  AutoMinorVersionUpgrade:
+    Description: Indicates that minor engine upgrades are applied automatically to
+      the DB instance during the maintenance window.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  AvailabilityZones:
+    Description: list of availability zones to use, must be the same quantity as specified
+      in NumberOfAvailabilityZones
+    Type: CommaDelimitedList
+    Default: Auto
+
+  BackupRetentionPeriod:
+    Description: The number of days during which automatic DB snapshots are retained.
+      Setting 0 disables automatic snapshots, maximum value is 35
+    Type: Number
+    Default: '35'
+    MinValue: '0'
+    MaxValue: '35'
+
+  CidrBlocks:
+    Description: comma seperated list of CIDR blocks to place RDS into, must be the
+      same quantity as specified in NumberOfAvailabilityZones
+    Type: CommaDelimitedList
+    Default: Auto
+  CopyTagsToSnapshot:
+    Description: Indicates whether to copy all of the user-defined tags from the DB
+      instance to snapshots of the DB instance.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  DBInstanceClass:
+    Description: The compute and memory capacity of the DB instance.
+    Type: String
+    Default: db.r4.2xlarge
+    AllowedValues:
+    - db.m4.xlarge
+    - db.m4.2xlarge
+    - db.m4.4xlarge
+    - db.m4.10xlarge
+    - db.m4.16xlarge
+    - db.r3.xlarge
+    - db.r3.2xlarge
+    - db.r3.4xlarge
+    - db.r3.8xlarge
+    - db.r4.xlarge
+    - db.r4.2xlarge
+    - db.r4.4xlarge
+    - db.r4.8xlarge
+    - db.r4.16xlarge
+    - db.m5.xlarge
+    - db.m5.2xlarge
+    - db.m5.4xlarge
+    - db.m5.12xlarge
+    - db.m5.24.xlarge
+    
+  EngineVersion:
+    Description: The version number of the SQL Server EE engine to use.
+    Type: String
+    Default: SQL-Server-2017-14.00.3049.1.v1
+    AllowedValues:
+    - SQL-Server-2017-14.00.3049.1.v1
+    - SQL-Server-2017-14.00.3035.2.v1
+    - SQL-Server-2017-14.00.3015.40.v1    
+    - SQL-Server-2016-13.00.5216.0.v1
+    - SQL-Server-2016-13.00.4522.0.v1
+    - SQL-Server-2016-13.00.4466.4.v1
+    - SQL-Server-2016-13.00.4451.0.v1
+    - SQL-Server-2016-13.00.4422.0.v1
+    - SQL-Server-2016-13.00.2164.0.v1
+    - SQL-Server-2014-12.00.5571.0.v1
+    - SQL-Server-2014-12.00.5546.0.v1
+    - SQL-Server-2014-12.00.5000.0.v1
+    - SQL-Server-2014-12.00.4422.0.v1
+    - SQL-Server-2012-11.00.7462.6.v1
+    - SQL-Server-2012-11.00.6594.0.v1
+    - SQL-Server-2012-11.00.6020.0.v1
+    - SQL-Server-2012-11.00.5058.0.v1
+
+  MasterUserPassword:
+    Description: Master user database Password, if left at default a 32 character
+      password will be generated
+    Type: String
+    Default: Auto
+    NoEcho: 'True'
+
+  MasterUsername:
+    Description: Master database Username
+    Default: Master
+    Type: String
+
+  MonitoringInterval:
+    Description: The interval, in seconds, between points when Enhanced Monitoring
+      metrics are collected for the DB instance.
+    Type: String
+    Default: '1'
+    AllowedValues:
+    - '0'
+    - '1'
+    - '5'
+    - '10'
+    - '15'
+    - '30'
+    - '60'
+
+  MultiAZ:
+    Description: Specifies if the database instance is a multiple Availability Zone (Mirroring / Always On)
+      deployment.
+    Type: String
+    Default: 'true'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  ServerTimezone:
+    Description: The default timezone for the database engine to use.
+    Type: String
+    Default: UTC
+    AllowedValues:
+    - Africa/Cairo
+    - Africa/Casablanca
+    - Africa/Harare
+    - Africa/Monrovia
+    - Africa/Nairobi
+    - Africa/Tripoli
+    - Africa/Windhoek
+    - America/Araguaina
+    - America/Asuncion
+    - America/Bogota
+    - America/Caracas
+    - America/Chihuahua
+    - America/Cuiaba
+    - America/Denver
+    - America/Fortaleza
+    - America/Guatemala
+    - America/Halifax
+    - America/Manaus
+    - America/Matamoros
+    - America/Monterrey
+    - America/Montevideo
+    - America/Phoenix
+    - America/Santiago
+    - America/Tijuana
+    - Asia/Amman
+    - Asia/Ashgabat
+    - Asia/Baghdad
+    - Asia/Baku
+    - Asia/Bangkok
+    - Asia/Beirut
+    - Asia/Calcutta
+    - Asia/Damascus
+    - Asia/Dhaka
+    - Asia/Irkutsk
+    - Asia/Jerusalem
+    - Asia/Kabul
+    - Asia/Karachi
+    - Asia/Kathmandu
+    - Asia/Krasnoyarsk
+    - Asia/Magadan
+    - Asia/Muscat
+    - Asia/Novosibirsk
+    - Asia/Riyadh
+    - Asia/Seoul
+    - Asia/Shanghai
+    - Asia/Singapore
+    - Asia/Taipei
+    - Asia/Tehran
+    - Asia/Tokyo
+    - Asia/Ulaanbaatar
+    - Asia/Vladivostok
+    - Asia/Yakutsk
+    - Asia/Yerevan
+    - Atlantic/Azores
+    - Australia/Adelaide
+    - Australia/Brisbane
+    - Australia/Darwin
+    - Australia/Hobart
+    - Australia/Perth
+    - Australia/Sydney
+    - Canada/Newfoundland
+    - Canada/Saskatchewan
+    - Brazil/East
+    - Europe/Amsterdam
+    - Europe/Athens
+    - Europe/Dublin
+    - Europe/Helsinki
+    - Europe/Istanbul
+    - Europe/Kaliningrad
+    - Europe/Moscow
+    - Europe/Paris
+    - Europe/Prague
+    - Europe/Sarajevo
+    - Pacific/Auckland
+    - Pacific/Fiji
+    - Pacific/Guam
+    - Pacific/Honolulu
+    - Pacific/Samoa
+    - US/Alaska
+    - US/Central
+    - US/Eastern
+    - US/East-Indiana
+    - US/Pacific
+    - UTC
+
+  NumberOfAvailabilityZones:
+    Description: Quantity of subnets to use, if selecting more than 2 the region this
+      stack is in must have at least that many Availability Zones
+    Type: String
+    Default: '2'
+    AllowedValues:
+    - '1'
+    - '2'
+    - '3'
+    - '4'
+    - '5'
+
+  CidrSize:
+    Description: Size of Cidr block to allocate if CidrBlocks is set to Auto.
+    Type: String
+    Default: 27
+
+  PortNumber:
+    Description: The port number for the database server to listen on
+    Type: Number
+    Default: '1433'
+    MinValue: '1150'
+    MaxValue: '65535'
+
+  PreferredBackupWindow:
+    Description: The daily time range in UTC during which automated backups are created
+      (if automated backups are enabled). Cannot overlap with PreferredMaintenanceWindowTime
+    Type: String
+    Default: 00:00-02:00
+    AllowedValues:
+    - 00:00-02:00
+    - 01:00-03:00
+    - 02:00-04:00
+    - 03:00-05:00
+    - 04:00-06:00
+    - 05:00-07:00
+    - 06:00-08:00
+    - 07:00-09:00
+    - 08:00-10:00
+    - 09:00-11:00
+    - 10:00-12:00
+    - 11:00-13:00
+    - 12:00-14:00
+    - 13:00-15:00
+    - 14:00-16:00
+    - 15:00-17:00
+    - 16:00-18:00
+    - 17:00-19:00
+    - 18:00-20:00
+    - 19:00-21:00
+    - 20:00-22:00
+    - 21:00-23:00
+    - 22:00-24:00
+
+  PreferredMaintenanceWindowDay:
+    Description: The day of the week which RDS maintenance will be performed
+    Type: String
+    Default: Mon
+    AllowedValues:
+    - Mon
+    - Tue
+    - Wed
+    - Thu
+    - Fri
+    - Sat
+    - Sun
+
+  PreferredMaintenanceWindowEndTime:
+    Description: The weekly end time in UTC for the RDS maintenance window, must be
+      more than PreferredMaintenanceWindowEndTime and cannot overlap with PreferredBackupWindow
+    Type: String
+    Default: 06:00
+    AllowedValues:
+    - 00:00
+    - 01:00
+    - 02:00
+    - 03:00
+    - 04:00
+    - 05:00
+    - 06:00
+    - 07:00
+    - 08:00
+    - 09:00
+    - '10:00'
+    - '11:00'
+    - '12:00'
+    - '13:00'
+    - '14:00'
+    - '15:00'
+    - '16:00'
+    - '17:00'
+    - '18:00'
+    - '19:00'
+    - '20:00'
+    - '21:00'
+    - '22:00'
+
+  PreferredMaintenanceWindowStartTime:
+    Description: The weekly start time in UTC for the RDS maintenance window, must
+      be less than PreferredMaintenanceWindowEndTime and cannot overlap with PreferredBackupWindow
+    Type: String
+    Default: 04:00
+    AllowedValues:
+    - 00:00
+    - 01:00
+    - 02:00
+    - 03:00
+    - 04:00
+    - 05:00
+    - 06:00
+    - 07:00
+    - 08:00
+    - 09:00
+    - '10:00'
+    - '11:00'
+    - '12:00'
+    - '13:00'
+    - '14:00'
+    - '15:00'
+    - '16:00'
+    - '17:00'
+    - '18:00'
+    - '19:00'
+    - '20:00'
+    - '21:00'
+    - '22:00'
+
+  PubliclyAccessible:
+    Description: Indicates whether the DB instance is an Internet-facing instance.
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  StorageEncrypted:
+    Description: Indicates whether the DB instance is encrypted. Not supported on MSSQLEX
+    Type: String
+    Default: 'false'
+    AllowedValues:
+    - 'true'
+    - 'false'
+
+  StorageType:
+    Description: Specifies the storage type to be associated with the DB instance.
+    Type: String
+    Default: io1
+    AllowedValues:
+    - io1
+    - gp2
+    - standard
+
+  VpcId:
+    Description: The ID of the VPC to launch the RDS instance into
+    Type: AWS::EC2::VPC::Id      
+          
+###############################################################################
+# Mappings
+###############################################################################
+ 
+Mappings:
+  Version2Family:
+    'SQL-Server-2017-14.00.3049.1.v1':
+      EngineVer: 14.00.3049.1.v1
+      Family: sqlserver-ee-14.0
+      MajorVersion: '14.00'
+    'SQL-Server-2017-14.00.3035.2.v1':
+      EngineVer: 14.00.3035.2.v1
+      Family: sqlserver-ee-14.0
+      MajorVersion: '14.00'
+    'SQL-Server-2017-14.00.3015.40.v1':
+      EngineVer: 14.00.3015.40.v1
+      Family: sqlserver-ee-14.0
+      MajorVersion: '14.00'    
+    'SQL-Server-2016-13.00.5216.0.v1':
+      EngineVer: 13.00.5216.0.v1
+      Family: sqlserver-ee-13.0
+      MajorVersion: '13.00'
+    'SQL-Server-2016-13.00.4522.0.v1':
+      EngineVer: 13.00.4522.0.v1
+      Family: sqlserver-ee-13.0
+      MajorVersion: '13.00'
+    'SQL-Server-2016-13.00.4466.4.v1':
+      EngineVer: 13.00.4466.4.v1
+      Family: sqlserver-ee-13.0
+      MajorVersion: '13.00'
+    'SQL-Server-2016-13.00.4451.0.v1':
+      EngineVer: 13.00.4451.0.v1
+      Family: sqlserver-ee-13.0
+      MajorVersion: '13.00'
+    'SQL-Server-2016-13.00.4422.0.v1':
+      EngineVer: 13.00.4422.0.v1
+      Family: sqlserver-ee-13.0
+      MajorVersion: '13.00'
+    'SQL-Server-2016-13.00.2164.0.v1':
+      EngineVer: 13.00.2164.0.v1
+      Family: sqlserver-ee-13.0
+      MajorVersion: '13.00'
+    'SQL-Server-2014-12.00.5571.0.v1':
+      EngineVer: 12.00.5571.0.v1
+      Family: sqlserver-ee-12.0
+      MajorVersion: '12.00'
+    'SQL-Server-2014-12.00.5546.0.v1':
+      EngineVer: 12.00.5546.0.v1
+      Family: sqlserver-ee-12.0
+      MajorVersion: '12.00'
+    'SQL-Server-2014-12.00.5000.0.v1':
+      EngineVer: 12.00.5000.0.v1
+      Family: sqlserver-ee-12.0
+      MajorVersion: '12.00'
+    'SQL-Server-2014-12.00.4422.0.v1':
+      EngineVer: 12.00.4422.0.v1
+      Family: sqlserver-ee-12.0
+      MajorVersion: '12.00'
+    'SQL-Server-2012-11.00.7462.6.v1':
+      EngineVer: 11.00.7462.6.v1
+      Family: sqlserver-ee-11.0
+      MajorVersion: '11.00'    
+    'SQL-Server-2012-11.00.6594.0.v1':
+      EngineVer: 11.00.6594.0.v1
+      Family: sqlserver-ee-11.0
+      MajorVersion: '11.00'
+    'SQL-Server-2012-11.00.6020.0.v1':
+      EngineVer: 11.00.6020.0.v1
+      Family: sqlserver-ee-11.0
+      MajorVersion: '11.00'
+    'SQL-Server-2012-11.00.5058.0.v1':
+      EngineVer: 11.00.5058.0.v1
+      Family: sqlserver-ee-11.0
+      MajorVersion: '11.00' 
+ 
+        
+###############################################################################
+# Conditions
+############################################################################### 
+Conditions:
+  3az:
+    !Or
+    - !Equals
+      - !Ref NumberOfAvailabilityZones
+      - '3'
+    - !Equals
+      - !Ref NumberOfAvailabilityZones
+      - '4'
+    - !Equals
+      - !Ref NumberOfAvailabilityZones
+      - '5'
+  4az:
+    !Or
+    - !Equals
+      - !Ref NumberOfAvailabilityZones
+      - '4'
+    - !Equals
+      - !Ref NumberOfAvailabilityZones
+      - '5'
+  5az:
+    !Equals
+    - !Ref NumberOfAvailabilityZones
+    - '5'
+  100GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 100GB 1000IOPS
+  300GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 300GB 3000IOPS
+  600GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 600GB 6000IOPS
+  1000GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 1000GB 10000IOPS
+  1500GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 1500GB 15000IOPS
+  2000GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 2000GB 20000IOPS
+  3000GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 3000GB 30000IOPS
+  4000GB:
+    !Equals
+    - !Ref AllocatedStorageAndIops
+    - 4000GB 32000IOPS
+  EncryptionEnabled:
+    !Equals
+    - !Ref StorageEncrypted
+    - 'true'
+  AutoCidrs:
+    !Equals
+    - !Select
+      - 0
+      - !Ref CidrBlocks
+    - Auto
+  AutoAzs:
+    !Equals
+    - !Select
+      - 0
+      - !Ref AvailabilityZones
+    - Auto
+  AutoPassword:
+    !Equals
+    - !Ref MasterUserPassword
+    - Auto
+
+###############################################################################
+# Resources 
+###############################################################################   
+    
+Resources:  
+
+###############################################################################
+# DB Instance 
+###############################################################################
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    Properties:
+      AllocatedStorage:
+        !If
+        - 100GB
+        - '100'
+        - !If
+          - 300GB
+          - '300'
+          - !If
+            - 600GB
+            - '600'
+            - !If
+              - 1000GB
+              - '1000'
+              - !If
+                - 1500GB
+                - '1500'
+                - !If
+                  - 2000GB
+                  - '2000'
+                  - !If
+                    - 3000GB
+                    - '3000'
+                    - !If
+                      - 4000GB
+                      - '4000'
+                      - '6000'
+      AllowMajorVersionUpgrade: !Ref AllowMajorVersionUpgrade
+      AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade
+      BackupRetentionPeriod: !Ref BackupRetentionPeriod
+      CopyTagsToSnapshot: !Ref CopyTagsToSnapshot
+      DBInstanceClass: !Ref DBInstanceClass      
+      DBParameterGroupName: !Ref DBParameterGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      Engine: sqlserver-ee
+      EngineVersion: 
+        !FindInMap
+        - Version2Family
+        - !Ref EngineVersion
+        - EngineVer
+      Iops:
+        !If
+        - 100GB
+        - '1000'
+        - !If
+          - 300GB
+          - '3000'
+          - !If
+            - 600GB
+            - '6000'
+            - !If
+              - 1000GB
+              - '10000'
+              - !If
+                - 1500GB
+                - '15000'
+                - !If
+                  - 2000GB
+                  - '20000'
+                  - !If
+                    - 3000GB
+                    - '30000'
+                    - !If
+                      - 4000GB
+                      - '32000'
+                      - '32000'
+      KmsKeyId:
+        !If
+        - EncryptionEnabled
+        - !GetAtt KMSKey.Arn
+        - !Ref AWS::NoValue
+      LicenseModel: license-included
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword:
+        !If
+        - AutoPassword
+        - !GetAtt AWSSBInjectedGeneratePassword.MasterUserPassword
+        - !Ref MasterUserPassword
+      MonitoringInterval: !Ref MonitoringInterval
+      MonitoringRoleArn: !GetAtt MonitoringRole.Arn
+      MultiAZ: !Ref MultiAZ
+      OptionGroupName: !Ref DBOptionGroup
+      Port: !Ref PortNumber
+      PreferredBackupWindow: !Ref PreferredBackupWindow
+      PreferredMaintenanceWindow: !Sub ${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowStartTime}-${PreferredMaintenanceWindowDay}:${PreferredMaintenanceWindowEndTime}
+      PubliclyAccessible: !Ref PubliclyAccessible
+      StorageEncrypted: !Ref StorageEncrypted
+      StorageType: !Ref StorageType
+      Timezone: !Ref ServerTimezone
+      VPCSecurityGroups:
+      - !Ref RDSSecurityGroup
+
+###############################################################################
+# DB Option 
+###############################################################################
+
+  DBOptionGroup:
+    Type: AWS::RDS::OptionGroup
+    DeletionPolicy: Retain
+    Properties:
+      EngineName: sqlserver-ee
+      MajorEngineVersion:
+        !FindInMap
+        - Version2Family
+        - !Ref EngineVersion
+        - MajorVersion
+      OptionGroupDescription: !Sub Database ${AWS::StackName}
+      OptionConfigurations: []
+  
+  DBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: !Sub Database ${AWS::StackName}
+      Family:
+        !FindInMap
+        - Version2Family
+        - !Ref EngineVersion
+        - Family             
+
+###############################################################################
+# Subnet 
+###############################################################################
+
+  DBSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 0
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
+        - 0
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
+  DBSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 1
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
+        - 1
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
+  DBSubnet3:
+    Condition: 3az
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 2
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
+        - 2
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
+  DBSubnet4:
+    Condition: 4az
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 3
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
+        - 3
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
+  DBSubnet5:
+    Condition: 5az
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        !Select
+        - 4
+        - !If
+          - AutoAzs
+          - !GetAtt AWSSBInjectedGetAzs.AvailabilityZones
+          - !Ref AvailabilityZones
+      VpcId: !Ref VpcId
+      CidrBlock:
+        !Select
+        - 4
+        - !If
+          - AutoCidrs
+          - !GetAtt AWSSBInjectedGetCidrs.CidrBlocks
+          - !Ref CidrBlocks
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub Database ${AWS::StackName}
+      SubnetIds:
+      - !Ref DBSubnet1
+      - !Ref DBSubnet2
+      - !If
+        - 3az
+        - !Ref DBSubnet3
+        - !Ref AWS::NoValue
+      - !If
+        - 4az
+        - !Ref DBSubnet4
+        - !Ref AWS::NoValue
+      - !If
+        - 5az
+        - !Ref DBSubnet5
+        - !Ref AWS::NoValue
+
+###############################################################################
+# Security 
+############################################################################### 
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub Allow Client connections to Database ${AWS::StackName}
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: !Ref PortNumber
+        ToPort: !Ref PortNumber
+        CidrIp: !Ref AccessCidr
+      SecurityGroupEgress:
+      - IpProtocol: '-1'
+        FromPort: '-1'
+        ToPort: '-1'
+        CidrIp: 0.0.0.0/0
+
+###############################################################################
+# Encryption
+############################################################################### 
+
+  KMSKey:
+    Condition: EncryptionEnabled
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub Database ${AWS::StackName}
+      Enabled: 'true'
+      EnableKeyRotation: 'true'
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+        - Sid: Allow administration of the key
+          Effect: Allow
+          Principal:
+            AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+          Action:
+          - kms:Create*
+          - kms:Describe*
+          - kms:Enable*
+          - kms:List*
+          - kms:Put*
+          - kms:Update*
+          - kms:Revoke*
+          - kms:Disable*
+          - kms:Get*
+          - kms:Delete*
+          - kms:ScheduleKeyDeletion
+          - kms:CancelKeyDeletion
+          Resource: '*'
+
+###############################################################################
+# Monitoring
+###############################################################################
+
+  MonitoringRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: monitoring.rds.amazonaws.com
+          Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+
+###############################################################################
+# Injected Lambdas
+############################################################################### 
+
+  AWSSBInjectedLambdaZipsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags: []
+  AWSSBInjectedCopyZips:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedCopyZipsLambda.Arn
+      DestBucket: !Ref AWSSBInjectedLambdaZipsBucket
+      SourceBucket: awsservicebrokeralpha
+      Prefix: functions/
+      Objects:
+      - get_cidrs/lambda_function.zip
+      - get_azs/lambda_function.zip
+      - generate_password/lambda_function.zip
+      - generate_dbname/lambda_function.zip
+  AWSSBInjectedCopyZipsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Path: /
+      Policies:
+      - PolicyName: lambda-copier
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource:
+            - arn:aws:s3:::awsservicebrokeralpha/*
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            - s3:DeleteObject
+            Resource:
+            - !Sub arn:aws:s3:::${AWSSBInjectedLambdaZipsBucket}/*
+  AWSSBInjectedCopyZipsLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Copies objects from a source S3 bucket to a destination
+      Handler: index.handler
+      Runtime: python2.7
+      Role: !GetAtt AWSSBInjectedCopyZipsRole.Arn
+      Timeout: 240
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import threading
+          import boto3
+          import cfnresponse
+
+
+          def copy_objects(source_bucket, dest_bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              for o in objects:
+                  key = prefix + o
+                  copy_source = {
+                      'Bucket': source_bucket,
+                      'Key': key
+                  }
+                  print('copy_source: %s' % copy_source)
+                  print('dest_bucket = %s' % dest_bucket)
+                  print('key = %s' % key)
+                  s3.copy_object(CopySource=copy_source, Bucket=dest_bucket, Key=key)
+
+
+          def delete_objects(bucket, prefix, objects):
+              s3 = boto3.client('s3')
+              objects = {'Objects': [{'Key': prefix + o} for o in objects]}
+              s3.delete_objects(Bucket=bucket, Delete=objects)
+
+
+          def timeout(event, context):
+              logging.error('Execution is about to time out, sending failure response to CloudFormation')
+              cfnresponse.send(event, context, cfnresponse.FAILED, {}, None)
+
+
+          def handler(event, context):
+              timer = threading.Timer((context.get_remaining_time_in_millis() / 1000.00) - 0.5, timeout, args=[event, context])
+              timer.start()
+              print('Received event: %s' % json.dumps(event))
+              status = cfnresponse.SUCCESS
+              try:
+                  source_bucket = event['ResourceProperties']['SourceBucket']
+                  dest_bucket = event['ResourceProperties']['DestBucket']
+                  prefix = event['ResourceProperties']['Prefix']
+                  objects = event['ResourceProperties']['Objects']
+                  if event['RequestType'] == 'Delete':
+                      delete_objects(dest_bucket, prefix, objects)
+                  else:
+                      copy_objects(source_bucket, dest_bucket, prefix, objects)
+              except Exception as e:
+                  logging.error('Exception: %s' % e, exc_info=True)
+                  status = cfnresponse.FAILED
+              finally:
+                  timer.cancel()
+                  cfnresponse.send(event, context, status, {}, None)
+  AWSSBInjectedGetCidrsRole:
+    Condition: AutoCidrs
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeVpcs
+            - ec2:DescribeSubnets
+            - ec2:DescribeAvailabilityZones
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGetCidrsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoCidrs
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGetCidrsRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/get_cidrs/lambda_function.zip
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedGetCidrs:
+    Condition: AutoCidrs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetCidrsLambda.Arn
+      Qty: 2
+      VpcId: !Ref VpcId
+      CidrSize: !Ref CidrSize
+  AWSSBInjectedGetAzsRole:
+    Condition: AutoAzs
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:DescribeAvailabilityZones
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGetAzsLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Condition: AutoAzs
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGetAzsRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/get_azs/lambda_function.zip
+      Runtime: python2.7
+      Timeout: '60'
+  AWSSBInjectedGetAzs:
+    Condition: AutoAzs
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGetAzsLambda.Arn
+      Qty: 2
+  AWSSBInjectedGeneratePasswordRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGeneratePasswordLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGeneratePasswordRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/generate_password/lambda_function.zip
+      Runtime: python3.6
+      Timeout: '60'
+  AWSSBInjectedGeneratePassword:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGeneratePasswordLambda.Arn
+      Length: 32
+  AWSSBInjectedGenerateDBNameRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+      - PolicyName: cfn_utility_get_cidrs
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+  AWSSBInjectedGenerateDBNameLambda:
+    DependsOn: AWSSBInjectedCopyZips
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: lambda_function.handler
+      Role:
+        Fn::GetAtt:
+        - AWSSBInjectedGenerateDBNameRole
+        - Arn
+      Code:
+        S3Bucket: !Ref AWSSBInjectedLambdaZipsBucket
+        S3Key: functions/generate_dbname/lambda_function.zip
+      Runtime: python3.6
+      Timeout: '60'
+  AWSSBInjectedGenerateDBName:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt AWSSBInjectedGenerateDBNameLambda.Arn
+      Length: 32
+
+###############################################################################
+# Outputs 
+###############################################################################   
+
+Outputs:
+  EndpointAddress:
+    Value: !GetAtt DBInstance.Endpoint.Address
+  MasterUsername:
+    Value: !Ref MasterUsername
+  MasterPassword:
+    Value:
+      !If
+      - AutoPassword
+      - !GetAtt AWSSBInjectedGeneratePassword.MasterUserPassword
+      - !Ref MasterUserPassword
+  Port:
+    Value: !Ref PortNumber
+  DBName:
+    Value: !Ref DBInstance
+
