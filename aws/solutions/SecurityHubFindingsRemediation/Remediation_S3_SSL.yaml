@@ -1,0 +1,204 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "This Template will create the supporting infrastructure for remediation of S3 SSL Request Only. It creates following resources
+- Lambda Function that is invoked upon taking an action from SecurityHub finding.
+- Lambda Function for creating SecurityHub Action Target
+- IAM Roles for Lambda Functions
+- Event Rule to invoke the Lambda Function upon taking action from SecurityHub "
+
+Resources:
+  CreateActionTargetLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: CreateActionTarget
+      Description: Custom resource to create an action target in Security Hub
+      Handler: index.lambda_handler
+      MemorySize: 256
+      Role: !GetAtt CreateActionTargetLambdaRole.Arn
+      Runtime: python3.7
+      Timeout: 60
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import os
+          def lambda_handler(event, context):
+              try:
+                  properties = event['ResourceProperties']
+                  region = os.environ['AWS_REGION']
+                  client = boto3.client('securityhub', region_name=region)
+                  responseData = {}
+                  if event['RequestType'] == 'Create':
+                      response = client.create_action_target(
+                          Name=properties['Name'],
+                          Description=properties['Description'],
+                          Id=properties['Id']
+                      )
+                      responseData['Arn'] = response['ActionTargetArn']
+                  elif event['RequestType'] == 'Delete':
+                      account_id = context.invoked_function_arn.split(":")[4]
+                      client.delete_action_target(
+                          ActionTargetArn=f"arn:aws:securityhub:{region}:{account_id}:action/custom/{properties['Id']}"
+                      )
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)
+              except Exception as e:
+                  print(e)
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {})
+  CreateActionTargetLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Policies:
+      - PolicyName: CreateActionTarget-LambdaPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricData
+            Resource: '*'
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+          - Effect: Allow
+            Action:
+            - securityhub:CreateActionTarget
+            - securityhub:DeleteActionTarget
+            Resource: '*'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal: { Service: lambda.amazonaws.com }
+          Action:
+          - sts:AssumeRole
+  S3SSLReqOnlyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: S3-SSL-ReqOnly
+      Description: Remediates S3 bucket policy by adding SecureTransport to the policy
+      Handler: index.lambda_handler
+      MemorySize: 256
+      Role: !GetAtt S3SSLReqOnlyLambdaRole.Arn
+      Runtime: python3.7
+      Timeout: 60
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import botocore.exceptions
+
+          s3 = boto3.client('s3')
+
+          def lambda_handler(event, context):
+              # Get bucket name from the event
+              print(event)
+              bucketArn =  event['detail']['findings'][0]['Resources'][0]['Id']
+              region = event['detail']['findings'][0]['Resources'][0]['Region']
+              if('gov' in region):
+                  bucket = bucketArn.split('arn:aws-us-gov:s3:::', 1)[1]
+              else:
+                  bucket = bucketArn.split('arn:aws:s3:::', 1)[1]
+              bucketArn1 = bucketArn + "/*"
+              secure_transport = { "Sid": "AllowSSLRequestsOnly", "Effect": "Deny","Principal": "*","Action": "s3:*","Resource": [bucketArn,bucketArn1], "Condition": { "Bool": { "aws:SecureTransport": "false" }}}
+              secureTransportInPolicy = False
+              try:
+                  #Retrieve existingbucket policy
+                  result = s3.get_bucket_policy(Bucket=bucket)
+                  policy = json.loads(result['Policy'])
+                  for stmt in policy['Statement']:
+                      effect = stmt['Effect']
+                      action = stmt['Action']
+                      if effect == 'Deny' and action == 's3:GetObject' and 'Condition' in stmt:
+                           if 'Bool' in stmt['Condition']:
+                               if 'aws:SecureTransport' in stmt['Condition']['Bool']:
+                                  secureTransportInPolicy = True
+                                  boolCond = stmt['Condition']['Bool']['aws:SecureTransport']
+                                  if (boolCond == 'false'):
+                                      print("Bucket has SecureTransport enabled already")
+                                      return
+                                  else:
+                                      stmt['Condition']['Bool']['aws:SecureTransport'] = 'false'
+                  if secureTransportInPolicy == False:
+                      policy['Statement'].append(secure_transport)
+              except botocore.exceptions.ClientError as e:
+                  if e.response['Error']['Code'] == 'NoSuchBucketPolicy':
+                      policy = {'Version': '2012-10-17', 'Id': 'Policy1504640911349', 'Statement': [{'Sid': 'AllowSSLRequestsOnly', 'Effect': 'Deny', 'Principal': '*', 'Action': 's3:*', 'Resource': [bucketArn,bucketArn1], 'Condition': {'Bool': {'aws:SecureTransport': 'false'}}}]}
+                      print("Bucket does not have policy, setting up new one...")
+                  else:
+                      print("Unexpected error: %s" % e)
+                      raise
+   
+              #update bucket policy
+              print(policy)
+              s3.put_bucket_policy(Bucket=bucket, Policy=json.dumps(policy))           
+  S3SSLReqOnlyLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Policies:
+      - PolicyName: S3SSLReqOnlyLambdaPolicy
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricData
+            Resource: '*'
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+          - Effect: Allow
+            Action:
+            - s3:GetBucketPolicy
+            - s3:PutBucketPolicy
+            Resource: '*'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal: { Service: lambda.amazonaws.com }
+          Action:
+          - sts:AssumeRole
+  S3SSLReqOnlyActionTarget:
+    Type: Custom::ActionTarget
+    Version: 1.0
+    Properties:
+      ServiceToken: !GetAtt CreateActionTargetLambdaFunction.Arn
+      Name: S3_SSL_Req_Only
+      Description: Remediates S3 bucket policy by adding SecureTransport to the policy
+      Id: S3SSLReqOnly
+  S3SSLReqOnlyEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: S3_SSL_REQ_ONLY_CWE
+      Description: "Remediates S3SSLRequestOnly by adding SecureTransport to Bucket Policy"
+      EventPattern:
+        source:
+          - aws.securityhub
+        detail-type:
+          - Security Hub Findings - Custom Action
+        resources:
+          - !GetAtt S3SSLReqOnlyActionTarget.Arn
+      State: "ENABLED"
+      Targets:
+        -
+          Arn:
+            Fn::GetAtt:
+              - "S3SSLReqOnlyLambdaFunction"
+              - "Arn"
+          Id: "S3_SSL_REQ_ONLY_CWE"
+  S3SSLReqOnlyCWEPermissions:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: "S3SSLReqOnlyLambdaFunction"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn:
+        Fn::GetAtt:
+          - "S3SSLReqOnlyEventRule"
+          - "Arn"
