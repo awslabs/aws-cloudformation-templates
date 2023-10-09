@@ -679,7 +679,7 @@ Resources:
               LambdaFunctionARN: !Ref 'LambdaEdgeVersion'
         PriceClass: !Ref 'PriceClass'
         ViewerCertificate:
-          ACMCertificateIdentifier: !Sub 'arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/${ACMCertificateIdentifier}'
+          AcmCertificateArn: !Sub 'arn:aws:acm:${AWS::Region}:${AWS::AccountId}:certificate/${ACMCertificateIdentifier}'
           SslSupportMethod:  !Ref 'SslSupportMethod'
           MinimumProtocolVersion: !Ref 'MinimumProtocolVersion'
         IPV6Enabled: !Ref 'IPV6Enabled'
