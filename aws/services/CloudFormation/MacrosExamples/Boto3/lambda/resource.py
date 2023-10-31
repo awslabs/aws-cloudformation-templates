@@ -55,7 +55,7 @@ def execute(action, properties):
         return "FAILED", "boto3 error: {}".format(e)
 
     properties = {
-        key[0].lower() + key[1:]: value
+        key[0] + key[1:]: value
         for key, value in properties.items()
     }
 
