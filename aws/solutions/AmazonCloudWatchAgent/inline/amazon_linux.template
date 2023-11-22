@@ -47,6 +47,9 @@ Resources:
             '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json':
               content: !Sub |
                 {
+                  "agent": {
+                    "run_as_user": "cwagent"
+                  },
                   "metrics": {
                     "append_dimensions": {
                       "AutoScalingGroupName": "${!aws:AutoScalingGroupName}",
