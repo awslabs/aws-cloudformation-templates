@@ -4,10 +4,11 @@ CloudFormation template transform macro: Explode
 
 import re
 import sys
-
+import logging
+import json
 
 EXPLODE_RE = re.compile(r'(?i)!Explode (?P<explode_key>\w+)')
-
+logger = logging.getLogger(__name__)
 
 def walk_resource(resource, map_data):
     """Recursively process a resource."""
@@ -29,7 +30,7 @@ def walk_resource(resource, map_data):
                 new_resource.append(replace_explode_in_string(value, map_data))
             else:
                 new_resource.append(value)
-           
+
     else:
         # if the resource is of type string
         new_resource = replace_explode_in_string(resource, map_data)
@@ -44,10 +45,10 @@ def replace_explode_in_string(value, map_data):
         try:
             replace_value = map_data[explode_key]
         except KeyError:
-            print("Missing item {} in mapping while processing {}: {}".format(
+            raise Exception ("Missing item {} in mapping while processing: {}\nMap Data:\n{}".format(
                 explode_key,
-                key,
-                value))
+                value,
+                json.dumps(map_data, indent=4)))
         if isinstance(replace_value, int):
             value = replace_value
             # No further explosion is possible on an int
@@ -75,8 +76,7 @@ def handle_section_transform(section, mappings):
         except KeyError:
             # This resource refers to a mapping entry which doesn't exist, so
             # fail
-            print('Unable to find mapping for exploding object {}'.format(resource_name))
-            raise
+            raise Exception('Unable to find mapping for exploding object {}'.format(resource_name))
         resource_instances = explode_map_data.keys()
         for resource_instance in resource_instances:
             new_resource = walk_resource(resource, explode_map_data[resource_instance])
@@ -107,7 +107,8 @@ def handler(event, _context):
 
     try:
         fragment = handle_transform(fragment)
-    except:
+    except Exception as e:
+        logger.error(e.__str__())
         status = "failure"
 
     return {
@@ -125,7 +126,6 @@ if __name__ == "__main__":
     Relatedly, always outputs JSON.
     """
     if len(sys.argv) == 2:
-        import json
         filename = sys.argv[1]
         if filename.endswith(".yml") or filename.endswith(".yaml"):
             try:
@@ -142,4 +142,4 @@ if __name__ == "__main__":
             print("Test file needs to end .yaml, .yml or .json")
             sys.exit(1)
         new_fragment = handle_transform(loaded_fragment)
-        print(json.dumps(new_fragment))
+        print(json.dumps(new_fragment,indent=4))
