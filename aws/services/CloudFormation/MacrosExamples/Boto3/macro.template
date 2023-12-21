@@ -4,7 +4,7 @@ Resources:
   ResourceFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Runtime: python2.7
+      Runtime: python3.11
       CodeUri: lambda
       Handler: resource.handler
       Policies: PowerUserAccess
@@ -12,7 +12,7 @@ Resources:
   MacroFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Runtime: python3.6
+      Runtime: python3.11
       CodeUri: lambda
       Handler: macro.handler
       Environment:

@@ -31,8 +31,9 @@ A typical use case for this macro might be, for example, to provide some basic c
 
     ```shell
     aws cloudformation deploy \
-        --stack-name boto3-macro-example \
-        --template-file example.template
+        --stack-name ExecutionRoleBuilderCFnMacro \
+        --template-file ExecutionRoleBuilderCFnMacro.packaged.template  \
+        --capabilities CAPABILITY_IAM
     ```
 
 ## Usage

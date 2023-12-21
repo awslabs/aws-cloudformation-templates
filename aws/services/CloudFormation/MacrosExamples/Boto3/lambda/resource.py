@@ -11,10 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific
 # language governing permissions and limitations under the License.
 
-from urllib2 import build_opener, HTTPHandler, Request
-import base64
+import urllib.request
 import boto3
-import httplib
 import json
 
 def sendResponse(event, context, status, message):
@@ -27,14 +25,13 @@ def sendResponse(event, context, status, message):
         "PhysicalResourceId": event["ResourceProperties"]["Action"],
         "Data": {},
     })
-
-    request = Request(event['ResponseURL'], data=body)
-    request.add_header('Content-Type', '')
+    request = urllib.request.Request(event['ResponseURL'], data=body.encode('utf-8'))
+    request.add_header('Content-Type', 'application/json')
     request.add_header('Content-Length', len(body))
     request.get_method = lambda: 'PUT'
 
-    opener = build_opener(HTTPHandler)
-    response = opener.open(request)
+    with urllib.request.urlopen(request) as response:
+        pass
 
 def execute(action, properties):
     action = action.split(".")
