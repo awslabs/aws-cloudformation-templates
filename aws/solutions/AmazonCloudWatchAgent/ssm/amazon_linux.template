@@ -17,8 +17,8 @@ Parameters:
     ConstraintDescription: must be a valid EC2 instance type.
   InstanceAMI:
     Description: Managed AMI ID for EC2 Instance
-    Type : String
-    Default: ami-7707a10f
+    Type : AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: arn:aws:ssm:us-east-1::parameter/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
   IAMRole:
     Description: EC2 attached IAM role
     Type: String
