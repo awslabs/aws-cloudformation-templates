@@ -20,9 +20,9 @@ Resources:
         - Key: DatetimeNow
           Value:
             'Fn::Transform':
-             - Name: 'String'
+             - Name: 'DatetimeNow'
                Parameters:
-                 param: '%Y-%m-%d %H:%M:%S'
+                 format: '%Y-%m-%d %H:%M:%S'
 ```
 
 ## Author
