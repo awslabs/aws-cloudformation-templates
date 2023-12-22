@@ -54,6 +54,14 @@ Resources:
         FromPort: 22
         ToPort: 22
         CidrIp: !Ref 'SSHLocation'
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIpv6: ::/0
 Outputs:
   InstanceId:
     Description: InstanceId of the newly created EC2 instance
