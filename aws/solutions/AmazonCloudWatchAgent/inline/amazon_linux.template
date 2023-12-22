@@ -6,15 +6,25 @@ Parameters:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
     Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  PackageLocation:
+    Description: Location to download the agent from
+    Type: String
+    ConstraintDescription: must be the location of the package to download
+    Default: s3://amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+  MetricNamespace:
+    Description: Metric Namespace
+    Type: String
+    ConstraintDescription: must be a string
+    Default: YourNameSpaceHere
   InstanceType:
     Description: EC2 instance type
     Type: String
-    Default: m4.2xlarge
+    Default: m5.large
     ConstraintDescription: must be a valid EC2 instance type.
   InstanceAMI:
     Description: Managed AMI ID for EC2 Instance
     Type : String
-    Default: ami-7707a10f
+    Default: ami-04e914639d0cca79a
   IAMRole:
     Description: EC2 attached IAM role
     Type: String
@@ -48,24 +58,24 @@ Resources:
               content: !Sub |
                 {
                   "metrics": {
+                    "namespace": "${MetricNamespace}",
                     "append_dimensions": {
-                      "AutoScalingGroupName": "${!aws:AutoScalingGroupName}",
-                      "ImageId": "${!aws:ImageId}",
-                      "InstanceId": "${!aws:InstanceId}",
-                      "InstanceType": "${!aws:InstanceType}"
+                      "InstanceId": "${!aws:InstanceId}"
                     },
                     "metrics_collected": {
                       "mem": {
                         "measurement": [
                           "mem_used_percent"
-                        ]
+                        ],
+                        "metrics_collection_interval": 15
                       },
                       "swap": {
                         "measurement": [
                           "swap_used_percent"
                         ]
                       }
-                    }
+                    },
+                    "force_flush_interval": 5
                   }
                 }
         # Invoke amazon-cloudwatch-agent-ctl to restart the AmazonCloudWatchAgent.
@@ -131,7 +141,8 @@ Resources:
         # This script below is to install AmazonCloudWatchAgent, restart AmazonCloudWatchAgent and tell the result to cloudformation.
         Fn::Base64: !Sub |
            #!/bin/bash
-           rpm -Uvh https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+           aws s3 cp ${PackageLocation} .
+           rpm -Uvh amazon-cloudwatch-agent.rpm
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region} --configsets default
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
 
@@ -149,3 +160,8 @@ Resources:
         ToPort: '22'
         CidrIp:
           Ref: SSHLocation
+
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value: !Ref 'EC2Instance'
