@@ -66,7 +66,7 @@ Resources:
       LifecycleConfiguration:
         Rules:
           -
-            ExpirationInDays: !Explode Retention
+            ExpirationInDays: "!Explode Retention"
             Status: Enabled
 ```
 
@@ -94,7 +94,7 @@ Resources:
     Type: AWS::S3::Bucket
     ExplodeMap: BucketMap
     Properties:
-        BucketName: !Explode Name
+        BucketName: "!Explode Name"
 ```
 
 ## Author
