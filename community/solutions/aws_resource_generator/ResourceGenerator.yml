@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: This template creates various AWS resources, including Amazon EC2 instances, Amazon S3 buckets, Amazon CloudFront distributions, and Amazon RDS databases.
+Parameters:
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: Enter the master password for the RDS database
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-024e6efaf93d85776 # Specify the ImageId for your OS.
+      InstanceType: t2.micro  # Specify the server type.
+      KeyName: test-cl   # Add a name of your key-pair file.
+      Tags:
+        - Key: Name
+          Value: Server  # Specify the name of your server
+
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Description: Bucket on which we will attach and test bucket policy
+    Properties:
+      BucketName: bucket-name   # Specify the name of your bucket
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  S3BucketACL:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PublicRead
+            Effect: Allow
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
+
+  S3BucketPolicy:
+    Type: 'AWS::S3::BucketPolicy' # Bucket policy to access bucket public.
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PublicRead
+            Effect: Allow
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt S3Bucket.DomainName
+            Id: S3Origin
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: allow-all  # Set to 'allow-all' or 'redirect-to-https'
+        DefaultRootObject: index.html
+        Enabled: true
+        Comment: CloudFront distribution for the S3 bucket
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: mysql  # Specify the database engine (e.g., mysql, postgresql)
+      DBInstanceIdentifier: database  # Specify a unique identifier for the DB instance
+      MasterUsername: admin  # Specify the master username
+      MasterUserPassword: !Ref DBPassword  # Specify the master password with stack creation command
+      AllocatedStorage: 10 # Specify the allocated storage in GB
+      DBInstanceClass: db.t2.micro  # Specify the DB instance class (e.g., db.t2.micro)
+      EngineVersion: 8.0  # Specify the database engine version
+      Tags:
+        - Key: Name
+          Value: Database
