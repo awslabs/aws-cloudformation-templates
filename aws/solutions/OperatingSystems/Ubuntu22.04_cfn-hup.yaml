@@ -245,11 +245,11 @@ Resources:
                   - |
                     triggers=post.update
                   - >
-                    path=Resources.WebServerInstance.Metadata.AWS::CloudFormation::Init
+                    path=Resources.EC2Instance.Metadata.AWS::CloudFormation::Init
                   - 'action=/opt/aws/bin/cfn-init -v '
                   - '         --stack '
                   - !Ref 'AWS::StackName'
-                  - '         --resource WebServerInstance '
+                  - '         --resource EC2Instance '
                   - '         --configsets InstallAndRun '
                   - '         --region '
                   - !Ref 'AWS::Region'
