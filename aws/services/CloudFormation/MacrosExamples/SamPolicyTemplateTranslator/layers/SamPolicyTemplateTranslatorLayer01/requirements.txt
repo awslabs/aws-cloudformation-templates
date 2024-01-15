@@ -1,0 +1,1 @@
+aws-sam-translator==1.25.0
