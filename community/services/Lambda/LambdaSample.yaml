@@ -62,10 +62,11 @@ Resources:
       Description: LambdaFunctioni of nodejs12.x.
       Runtime: nodejs12.x
       Code:
-        ZipFile:
-          "exports.handler = function(event, context){\n
-            var sample = sample;"
-      Handler: ${LambdaHandlerPath}
+        ZipFile: |
+          "exports.handler = function(event, context)
+            var sample = sample;
+            }"
+      Handler: !Sub ${LambdaHandlerPath}
       MemorySize: 128
       Timeout: 10
       Role:
