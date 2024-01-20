@@ -22,7 +22,7 @@ Parameters:
       m5.large, m5.xlarge, m5.2xlarge, m5.4xlarge,
       c5.large, c5.xlarge, c5.2xlarge, c5.4xlarge, c5.9xlarge,
       g3.8xlarge,
-      r5.large, r5.xlarge, r5.2xlarge, r5.4xlarge, r3.12xlarge,
+      r5.large, r5.xlarge, r5.2xlarge, r5.4xlarge,
       i3.xlarge, i3.2xlarge, i3.4xlarge, i3.8xlarge,
       d2.xlarge, d2.2xlarge, d2.4xlarge, d2.8xlarge]
     ConstraintDescription: must be a valid EC2 instance type.
