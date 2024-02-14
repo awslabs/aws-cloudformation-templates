@@ -29,15 +29,21 @@
       "Default": "false"
     },
      "VisibilityTimeout": {
-      "Description": "This should be longer than the time it would take to process and delete a message, this should not exceed 12 hours.",
+      "Description": "Time in seconds. This should be longer than the time it would take to process and delete a message, this should not exceed 12 hours.",
       "Type": "Number",
       "Default": "5"
+    },
+     "KmsMasterKeyIdForSqs": {
+      "Description": "(Optional) For unencrypted leave blank. The ID or Alias of an AWS managed or a custom CMK.",
+      "Type": "String",
+      "Default": "alias/aws/sqs"
     }
     
   },
   "Mappings": {},
   "Conditions": {
-    "CreateDeadLetterQueue" : {"Fn::Equals" : [{"Ref" : "UsedeadletterQueue"}, "true"]}
+    "CreateDeadLetterQueue" : {"Fn::Equals" : [{"Ref" : "UsedeadletterQueue"}, "true"]},
+    "IsKmsExist": {"Fn::Not": [{"Fn::Equals": ["", {"Ref": "KmsMasterKeyIdForSqs"}]}]}
     },
   "Resources": {
     "SQSQueue":{
@@ -47,6 +53,7 @@
       "MaximumMessageSize": {"Ref":"MaximumMessageSize"},
       "MessageRetentionPeriod": {"Ref":"MessageRetentionPeriod"},
       "ReceiveMessageWaitTimeSeconds":{"Ref":"ReceiveMessageWaitTimeSeconds"},
+      "KmsMasterKeyId": {"Fn::If" : ["IsKmsExist",{"Ref":"KmsMasterKeyIdForSqs"}, { "Ref" : "AWS::NoValue" }] },
       "RedrivePolicy": {
       "Fn::If" : [
         "CreateDeadLetterQueue",
