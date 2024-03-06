@@ -1,0 +1,291 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "ApiType": {
+      "Description": "The Endpoint type for RESTApi",
+      "Type": "String",
+      "Default": "REGIONAL",
+      "AllowedValues": [
+        "EDGE",
+        "REGIONAL",
+        "PRIVATE"
+      ]
+    },
+    "ApigatewayTimeout": {
+      "Description": "ApiGateway Backend Integration timeout in milliseconds",
+      "Type": "Number",
+      "Default": "29000",
+      "MinValue": "50",
+      "MaxValue": "29000"
+    },
+    "LambdaFunctionName": {
+      "Description": "The Name for the Lambda Function",
+      "Type": "String",
+      "Default": "My-Function"
+    }
+  },
+  "Resources": {
+    "RestApi": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "Description": "My Rest API",
+        "Name": "MyApi",
+        "EndpointConfiguration": {
+          "Types": [
+            {
+              "Ref": "ApiType"
+            }
+          ]
+        }
+      }
+    },
+    "ApiResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "RestApi",
+            "RootResourceId"
+          ]
+        },
+        "RestApiId": {
+          "Ref": "RestApi"
+        },
+        "PathPart": "{city}"
+      }
+    },
+    "RequestModel": {
+      "Type": "AWS::ApiGateway::Model",
+      "Properties": {
+        "ContentType": "application/json",
+        "Name": "MyModel",
+        "RestApiId": {
+          "Ref": "RestApi"
+        },
+        "Schema": {
+          "$schema": "http://json-schema.org/draft-04/schema#",
+          "title": "MyModel",
+          "type": "object",
+          "properties": {
+            "callerName": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "ApiMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "HttpMethod": "ANY",
+        "AuthorizationType": "NONE",
+        "RequestParameters": {
+          "method.request.path.city": "true",
+          "method.request.querystring.time": "true",
+          "method.request.header.day": "true"
+        },
+        "MethodResponses": [
+          {
+            "StatusCode": "200"
+          }
+        ],
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS",
+          "TimeoutInMillis": {
+            "Ref": "ApigatewayTimeout"
+          },
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition"
+                },
+                ":apigateway:",
+                {
+                  "Ref": "AWS::Region"
+                },
+                ":lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "LambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          },
+          "RequestTemplates": {
+            "application/json": {
+              "Fn::Join": [
+                "",
+                [
+                  "\n #set($inputRoot = $input.path('$'))",
+                  "\n{",
+                  "\n \"city\": \"$input.params('city')\",",
+                  "\n \"time\": \"$input.params('time')\",",
+                  "\n \"day\":  \"$input.params('day')\",",
+                  "\n \"name\": \"$inputRoot.callerName\"",
+                  "\n}"
+                ]
+              ]
+            }
+          },
+          "IntegrationResponses": [
+            {
+              "StatusCode": "200"
+            }
+          ]
+        },
+        "ResourceId": {
+          "Ref": "ApiResource"
+        },
+        "RestApiId": {
+          "Ref": "RestApi"
+        },
+        "RequestModels": {
+          "application/json": {
+            "Ref": "RequestModel"
+          }
+        }
+      }
+    },
+    "LambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "ZipFile": {
+            "Fn::Join": [
+              "\n",
+              [
+                "import json",
+                "days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']",
+                "times = ['morning', 'afternoon', 'evening', 'night', 'day']",
+                "def lambda_handler(event, context):",
+                " name = event.get(\"name\", \"you\")",
+                " city = event.get(\"city\", \"world\")",
+                " try:",
+                "   if (times.index(event.get(\"time\", \"None\"))) >-1:",
+                "     time = event.get(\"time\")",
+                " except ValueError:",
+                "   time = \"day\"",
+                " try:",
+                "   if (days.index(event.get(\"day\",\"None\"))) >-1:",
+                "     day = event['day']",
+                " except ValueError:",
+                "   day = None",
+                " greetings = \"Good {time}, {name} of {city}. \".format(time=time, name=name, city=city)",
+                " if day:",
+                "   greetings += \"Happy {}\".format(day)",
+                " return {",
+                "   'statusCode': 200,",
+                "   'body': json.dumps(greetings)",
+                " }"
+              ]
+            ]
+          }
+        },
+        "Handler": "index.lambda_handler",
+        "FunctionName": {
+          "Ref": "LambdaFunctionName"
+        },
+        "MemorySize": "128",
+        "Runtime": "python3.6",
+        "Timeout": "10",
+        "Role": {
+          "Fn::GetAtt": [
+            "LambdaIamRole",
+            "Arn"
+          ]
+        }
+      }
+    },
+    "LambdaIamRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "RoleName": "LambdaRole",
+        "Policies": [
+          {
+            "PolicyName": "LambdaApipolicy",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${LambdaFunctionName}:*"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "LambdaApiGatewayInvoke": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "LambdaFunction",
+            "Arn"
+          ]
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:aws:execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "RestApi"
+              },
+              "/*/*/*"
+            ]
+          ]
+        }
+      }
+    }
+  }
+}
